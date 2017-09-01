@@ -11,6 +11,20 @@ Terminology:
 - Each time CI is triggered on a change, a CI run occurs
 - A CI run consists of one or more CI jobs e.g. foo-copyright, foo-check and so on
 
+## Screenshots
+
+Example output with projects tab (--project-map specified)
+![Screenshot #1](docs/screenshots/projects.png "Screenshot - example output with projects tab (--project-map specified)")
+
+Example output where CI jobs include duration info
+![Screenshot #2](docs/screenshots/capacity_duration.png "Screenshot - example output where CI jobs include duration info")
+
+Example output without projects (no projects tabs)
+![Screenshot #3](docs/screenshots/no_projects.png "Screenshot - example output without projects (no projects tabs)")
+
+Example output of detailed stats section
+![Screenshot #4](docs/screenshots/detailed_stats.png "Screenshot - example output of detailed stats section")
+
 ## Installation
 ### Using virtualenv
 
