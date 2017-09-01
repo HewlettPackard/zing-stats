@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>{{ title }}</title>
+
+        <!-- Latest compiled and minified CSS -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+        <!-- Optional theme -->
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+
+        <!-- Latest compiled and minified JavaScript -->
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+        <!-- plot.ly js -->
+        <script src="https://cdn.plot.ly/plotly-1.25.2.min.js"></script>
+
+        <style>
+            .cr {
+              width: 200px;
+              padding: 16px;
+              position: absolute;
+              text-align: center;
+              color: #f0f0f0;
+              z-index: 2147483647;
+            }
+
+            .cr-sticky {
+              position: fixed;
+            }
+
+            /* Positions */
+
+            .cr-top    { top: 25px; }
+            .cr-bottom { bottom: 25px; }
+            .cr-left   { left: -50px; }
+            .cr-right  { right: -50px; }
+
+            /* Rotations */
+
+            .cr-top.cr-left,
+            .cr-bottom.cr-right {
+              transform: rotate(-45deg);
+            }
+
+            .cr-top.cr-right,
+            .cr-bottom.cr-left {
+              transform: rotate(45deg);
+            }
+
+            /* Colors */
+
+            .cr-white     { background-color: #f0f0f0; color: #444; }
+            .cr-black     { background-color: #333; }
+            .cr-grey      { background-color: #999; }
+            .cr-blue      { background-color: #39d; }
+            .cr-green     { background-color: #2c7; }
+            .cr-turquoise { background-color: #1b9; }
+            .cr-purple    { background-color: #95b; }
+            .cr-red       { background-color: #e43; }
+            .cr-orange    { background-color: #e82; }
+            .cr-yellow    { background-color: #ec0; }
+        </style>
+    </head>
+
+    <body style='padding-bottom: 70px;'>
+        <div class="cr cr-top cr-right cr-sticky cr-orange">
+            Beta
+        </div>
+        <div class="container">
+            <div class="row">
+                <div class="page-header">
+                    <h1> {{ title }} </h1>
+                </div>
+                <ul class="nav nav-tabs">
+                    {% for group in group_list|sort %}
+                        {% set is_active, url = "", group.lower() %}
+                        {% if group == 'All' %}
+                            {% set url = 'index' %}
+                        {% endif %}
+                        {% if group == current_group %}
+                            {% set is_active = 'class="active"' %}
+                        {% endif %}
+                        <li role="presentation" {{ is_active }}><a href="{{ url }}.html">{{ group }}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+            <div class="row">
+                {{ changes_plot }}
+            </div>
+            <div class="row">
+                {{ status_plot }}
+            </div>
+            <div class="row">
+                {{ ci_capacity_plot }}
+            </div>
+            <div class="row">
+                {{ ci_job_time_plot }}
+            </div>
+            <div class="row">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <tr>
+                            <th>Project</th>
+                            <th>Changes created</th>
+                            <th>Changes updated</th>
+                            <th>Changes merged</th>
+                            <th>Patches /change (mean)</th>
+                            <th>CI time (total)</th>
+                            <th>CI longest job duration (max)</th>
+                            <th>CI run success</th>
+                            <th>CI run failure</th>
+                            <th>Change lifespan (mean)</th>
+                            <th>Recheck count (mean)</th>
+                            <th>Reverify count (mean)</th>
+                            <th>Has CI check</th>
+                            <th>Has CI gate</th>
+                        </tr>
+                        <tr>
+                            <th>Total</th>
+                            <th>{{ '%0.0f' % df['total']['created'].sum()|float }}</th>
+                            <th>{{ '%0.0f' % df['total']['updated'].sum()|float }}</th>
+                            <th>{{ '%0.0f' % df['total']['merged'].sum()|float }}</th>
+                            <th>{{ '%0.1f' % df['total']['revisions'].mean()|float }}</th>
+                            <th>{{ '%0.1f' % (df['total']['ci_total_time_sec'].sum()/60.0)|float }}min</th>
+                            <th>{{ '%0.1f' % (df['total']['ci_longest_time_sec'].max()/60.0)|float }} min</th>
+                            {% set ci_total = df['total']['ci_success'].sum() + df['total']['ci_failure'].sum() %}
+                            {% if ci_total <= 0 %}
+                                {% set ci_success = 0 %}
+                                {% set ci_failure = 0 %}
+                            {% else %}
+                                {% set ci_success = df['total']['ci_success'].sum()/ci_total %}
+                                {% set ci_failure = df['total']['ci_failure'].sum()/ci_total %}
+                            {% endif %}
+                            <th>{{ '%0.1f' % (ci_success * 100)|float }}%</th>
+                            <th>{{ '%0.1f' % (ci_failure * 100)|float }}%</th>
+                            <th>{{ '%0.1f' % (df['total']['lifespan_sec'].mean()/3600)|float }} hour</th>
+                            <th>{{ '%0.1f' % df['total']['recheck'].mean()|float }}</th>
+                            <th>{{ '%0.1f' % df['total']['reverify'].mean()|float }}</th>
+                            <th>n/a</th>
+                            <th>n/a</th>
+                        </tr>
+
+                        {% for project in projects_to_report|sort if project != 'total' %}
+                            <tr>
+                                <td>{{ project }}</td>
+                                <td>{{ '%0.0f' % df[project]['created'].sum()|float }}</td>
+                                <td>{{ '%0.0f' % df[project]['updated'].sum()|float }}</td>
+                                <td>{{ '%0.0f' % df[project]['merged'].sum()|float }}</td>
+                                <td>{{ '%0.1f' % df[project]['revisions'].mean()|float }}</td>
+                                <td>{{ '%0.1f' % (df[project]['ci_total_time_sec'].sum()/60.0)|float }} min</td>
+                                <td>{{ '%0.1f' % (df[project]['ci_longest_time_sec'].max()/60.0)|float }} min</td>
+                                {% set ci_total = df[project]['ci_success'].sum() + df[project]['ci_failure'].sum() %}
+                                {% if ci_total <= 0 %}
+                                    {% set ci_success = 0 %}
+                                    {% set ci_failure = 0 %}
+                                {% else %}
+                                    {% set ci_success = df[project]['ci_success'].sum()/ci_total %}
+                                    {% set ci_failure = df[project]['ci_failure'].sum()/ci_total %}
+                                {% endif %}
+                                <td>{{ '%0.1f' % (ci_success * 100)|float }}%</td>
+                                <td>{{ '%0.1f' % (ci_failure * 100)|float }}%</td>
+                                <td>{{ '%0.1f' % (df[project]['lifespan_sec'].mean()/3600)|float }} hour</td>
+                                <td>{{ '%0.1f' % df[project]['recheck'].mean()|float }}</td>
+                                <td>{{ '%0.1f' % df[project]['reverify'].mean()|float }}</td>
+                                <td>
+                                {% if all_projects[project]['ci_check'] %}
+                                    Y
+                                {% else %}
+                                    N
+                                {% endif %}
+                                </td>
+                                <td>
+                                {% if all_projects[project]['ci_gate'] %}
+                                    Y
+                                {% else %}
+                                    N
+                                {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+
+                </div>
+                <div class="row">
+                    <div class="col-md-10 col-md-offset-1">
+                        <p class="text-center">
+                            {{ num_changes }} total changes between {{ start_dt.strftime('%H:%M %d-%b-%Y') }} and {{ finish_dt.strftime('%H:%M %d-%b-%Y') }}
+                        </p>
+                    </div>
+                    <div class="col-md-10 col-md-offset-1">
+                        <small>
+                            Generated at {{ finish_dt.strftime('%H:%M') }} on {{ finish_dt.strftime('%d-%b-%Y') }} by https://github.com/HewlettPackard/zing-stats,
+                            bugs to <a href={{ report_issue_link }}>{{ report_issue_link }}</a>, queries to
+                            <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</html>
