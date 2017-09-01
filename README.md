@@ -13,12 +13,16 @@ Terminology:
 
 ## Screenshots
 
-![Screenshot #1](docs/screenshots/projects.png "Screenshot - example output with projects (--project-map)")
+Example output with projects tab (--project-map specified)
+![Screenshot #1](docs/screenshots/projects.png "Screenshot - example output with projects tab (--project-map specified)")
 
+Example output where CI jobs include duration info
 ![Screenshot #2](docs/screenshots/capacity_duration.png "Screenshot - example output where CI jobs include duration info")
 
+Example output without projects (no projects tabs)
 ![Screenshot #3](docs/screenshots/no_projects.png "Screenshot - example output without projects (no projects tabs)")
 
+Example output of detailed stats section
 ![Screenshot #4](docs/screenshots/detailed_stats.png "Screenshot - example output of detailed stats section")
 
 ## Installation
