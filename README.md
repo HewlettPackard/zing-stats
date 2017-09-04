@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/HewlettPackard/zing-stats.svg?branch=master)](https://travis-ci.org/HewlettPackard/zing-stats)
+[![Docker Automated build](https://img.shields.io/docker/automated/zingstats/zing-stats.svg?maxAge=2592000?style=plastic)](https://github.com/zingstats/zing-stats/)
 
 &copy; Copyright 2017 Hewlett Packard Enterprise Development LP
 
@@ -36,7 +37,12 @@ Example output of detailed stats section
 4. ```. ~/virt_env/zing/bin/activate```
 5. ```pip install -r requirements.txt```
 
-## Running as script
+## Running
+
+### Running from docker hub
+docker run zingstats/zing-stats
+
+### Running as script
 
 ```
 ./zing_stats.py --gerrit-host <gerrit url> -o <output directory>
@@ -44,7 +50,7 @@ Example output of detailed stats section
 
 The team names used in zing-stats reports are read from projects_teams.json
 
-## Running in docker compose
+### Running in docker compose
 
 Uses docker compose to stand up dedicated containers for generation and
 reporting.
