@@ -114,8 +114,6 @@
                             <th>Change lifespan (mean)</th>
                             <th>Recheck count (mean)</th>
                             <th>Reverify count (mean)</th>
-                            <th>Has CI check</th>
-                            <th>Has CI gate</th>
                         </tr>
                         <tr>
                             <th>Total</th>
@@ -138,8 +136,6 @@
                             <th>{{ '%0.1f' % (df['total']['lifespan_sec'].mean()/3600)|float }} hour</th>
                             <th>{{ '%0.1f' % df['total']['recheck'].mean()|float }}</th>
                             <th>{{ '%0.1f' % df['total']['reverify'].mean()|float }}</th>
-                            <th>n/a</th>
-                            <th>n/a</th>
                         </tr>
 
                         {% for project in projects_to_report|sort if project != 'total' %}
@@ -164,20 +160,6 @@
                                 <td>{{ '%0.1f' % (df[project]['lifespan_sec'].mean()/3600)|float }} hour</td>
                                 <td>{{ '%0.1f' % df[project]['recheck'].mean()|float }}</td>
                                 <td>{{ '%0.1f' % df[project]['reverify'].mean()|float }}</td>
-                                <td>
-                                {% if all_projects[project]['ci_check'] %}
-                                    Y
-                                {% else %}
-                                    N
-                                {% endif %}
-                                </td>
-                                <td>
-                                {% if all_projects[project]['ci_gate'] %}
-                                    Y
-                                {% else %}
-                                    N
-                                {% endif %}
-                                </td>
                             </tr>
                         {% endfor %}
                     </table>

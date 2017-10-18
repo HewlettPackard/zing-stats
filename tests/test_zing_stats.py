@@ -51,11 +51,11 @@ def test_parse_gerrit_change_message():
             'message': 'Patch Set 1: Verified+1\n\nBuild succeeded\n\n- https://zing.example.net/jenkins/job/test-check/6/ : SUCCESS in 7s'  # noqa
         },
     ]
-    msg0 = zing_stats.parse_gerrit_change_message(messages[0])
+    msg0 = zing_stats.parse_ci_job_comments(messages[0])
     assert msg0 == {}
-    msg1 = zing_stats.parse_gerrit_change_message(messages[1])
+    msg1 = zing_stats.parse_ci_job_comments(messages[1])
     assert msg1 == {}
-    msg2 = zing_stats.parse_gerrit_change_message(messages[2])
+    msg2 = zing_stats.parse_ci_job_comments(messages[2])
     assert msg2['date'] == '2017-04-20 17:15:44.000000000'
     assert msg2['num'] == '1'
     assert msg2['status'] == 'succeeded'
