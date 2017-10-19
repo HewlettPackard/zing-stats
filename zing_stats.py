@@ -179,6 +179,7 @@ def main():
 
     projects = read_from_json(args.projects)
 
+
     gerrit_change_count, gerrit_changes = gather_gerrit_changes(args, start_dt, projects)
     github_pr_count, github_prs = gather_github_prs(args, start_dt, projects)
     change_count = gerrit_change_count + github_pr_count
