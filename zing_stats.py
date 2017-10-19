@@ -73,7 +73,9 @@ def main():
                "# retrieve stats for last 24 hours and dump to changes.json\n"
                "./zing_stats.py -r 168 -c > changes.json\n"
                "# analyse stats previously gathered in changes.json\n"
-               "./zing_stats.py -r 168 -j changes.json\n",
+               "./zing_stats.py -r 168 -j changes.json\n"
+               "# analyse a set of gerrit and github projects with github auth\n"
+               "./zing_stats.py --github-host https://github.example.com --github-user username --github-token 3ec57a --gerrit-host https://gerrit.example.com --projects projects.json\n",
         formatter_class=argparse.RawDescriptionHelpFormatter)
     script_name = __file__
     parser.set_defaults(
@@ -128,7 +130,7 @@ def main():
                         help='Verify https requests (def: %(default)s).')
     parser.add_argument('-f', '--format', dest='report_format',
                         help='report format (def: %(default)s)',
-                        choices=['html', 'json'],
+                        choices=['html'],
                         default='html')
     parser.add_argument('--report-issue-link', dest='report_issue_link',
                         default=ISSUES_URL,
@@ -142,14 +144,9 @@ def main():
     parser.add_argument('-r', '--report-range-hours', dest='range_hours',
                         type=int, default=168,
                         help='Range for report in hours (def: %(default)s).')
-    parser.add_argument('--projects-gerrit', dest='proj_gerrit',
-                        help='JSON file listing gerrit projects to analyse.')
-    parser.add_argument('--projects-github', dest='proj_github',
-                        help='JSON file listing github projects to analyse.')
-    # TODO merge this into gerrit and github projects files now that we're providing those
-    parser.add_argument('--project-map', dest='proj_map',
-                        help='JSON file mapping projects to teams for html'
-                             'reports (optional).')
+    parser.add_argument('--projects', dest='projects',
+                        required=True,
+                        help='JSON file listing projects to analyse.')
     parser.add_argument('--html-template', dest='html_template',
                         default=os.path.join(parser.get_default('script_dir'),
                                              'zing_stats.html.j2'),
@@ -180,126 +177,76 @@ def main():
              start_dt.strftime('%H:%M:%S %d-%b-%Y'),
              finish_dt.strftime('%H:%M:%S %d-%b-%Y'))
 
-    projects = dict()
-    if args.proj_gerrit:
-        projects['gerrit'] = read_from_json(args.proj_gerrit)
-    else:
-        projects['gerrit'] = dict()
+    projects = read_from_json(args.projects)
 
-    if args.proj_github:
-        projects['github'] = read_from_json(args.proj_github)
-    else:
-        projects['github'] = dict()
-
-    if not (args.proj_gerrit or args.proj_github):
-        log.critical('At least one of --projects-gerrit or --projects-github must be specified')
-        exit(1)
-
-    # total_gerrit_changes = 0
-    # gerrit_changes = dict()
-    total_gerrit_changes, gerrit_changes = gather_gerrit_changes(args, start_dt, projects['gerrit'])
-
-    # total_github_prs = 0
-    # github_prs = dict()
-    total_github_prs, github_prs = gather_github_prs(args, start_dt, projects['github'])
+    total_gerrit_changes, gerrit_changes = gather_gerrit_changes(args, start_dt, projects)
+    total_github_prs, github_prs = gather_github_prs(args, start_dt, projects)
 
     df = dict()
     for project in sorted(gerrit_changes):
         df[project] = generate_dataframes_gerrit(gerrit_changes[project], start_dt)
         log.debug('%s df:\n%s', project, df[project])
 
-    # TODO see if this can be combined with the above
     for project in sorted(github_prs):
         df[project] = generate_dataframes_github(args, github_prs[project], start_dt)
         log.debug('%s df:\n%s', project, df[project])
 
-    proj_map = None
-    if args.proj_map:
-        log.info('Reading project/team mappings from %s', args.proj_map)
-        proj_map = read_from_json(args.proj_map)
+    if args.report_format == 'html':
+        write_html(args, df, total_gerrit_changes, start_dt, finish_dt, projects)
+
+
+def read_from_json(json_file):
+    with open(json_file, 'r') as f:
+        data = f.read()
+    try:
+        json_data = json.loads(data)
+    except ValueError:
+        log.critical('%s is not well-formed json', json_file)
+        exit(1)
+    return json_data
+
+
+def write_html(args, df, num_changes, start_dt, finish_dt, projects):
+
+    teams_map = dict()
+    teams_map['All'] = list()
+    for project in projects['gerrit'] + projects['github']:
+        team = project['team']
+        name = project['name']
+        if team not in teams_map:
+            teams_map[team] = list()
+        if name not in teams_map['All']:
+            teams_map['All'].append(name)
+        if name not in teams_map[team]:
+            teams_map[team].append(name)
+    log.debug('teams map: %s', teams_map)
 
     if args.range_hours <= 24:
         file_prefix = 'last_%dh' % args.range_hours
     else:
         file_prefix = 'last_%gd' % round((args.range_hours / 24), 1)
-
-    if args.report_format == 'html':
-        write_html(args, df, file_prefix, total_gerrit_changes,
-                   start_dt, finish_dt, projects['gerrit'], proj_map)
-
-    elif args.report_format == 'json':
-        write_json(args, df, file_prefix)
-
-
-def read_from_json(json_file):
-    proj_map = None
-    with open(json_file, 'r') as f:
-        json_data = f.read()
-    try:
-        proj_map = json.loads(json_data)
-    except ValueError:
-        log.critical('%s is not well-formed json', json_file)
-        exit(1)
-    return proj_map
-
-
-def write_html(args, df, file_prefix, num_changes, start_dt, finish_dt,
-               all_projects, proj_map):
-    if proj_map:
-        # convert project maps to groups into group map to projects
-        group_map = dict()
-        for group in set(proj_map.values()):
-            group_map[group] = list()
-            for project in proj_map:
-                if proj_map[project] == group:
-                    group_map[group].append(project)
-
-        # and add an all group for all projects
-        group_map['All'] = proj_map.keys()
-        log.debug('group_map: %s', group_map)
-
-        for group in group_map:
-            projects = group_map[group]
-            groups = group_map.keys()
-            html = generate_html(args, df, num_changes, start_dt, finish_dt,
-                                 projects, all_projects, group, groups)
-            dir_path = os.path.join(args.output_dir, file_prefix)
-            if group == 'All':
-                file_name = 'index.html'
-            else:
-                file_name = '%s.html' % group.lower()
-            file_path = os.path.join(dir_path, file_name)
-            if not os.path.exists(dir_path):
-                os.makedirs(dir_path)
-            with open(file_path, 'w') as f:
-                f.write(html)
-            log.info('Wrote %s for %s group', file_path, group)
-    else:
+    all_projects = teams_map['All']
+    for team in sorted(teams_map):
+        team_projects = teams_map[team]
+        teams = teams_map.keys()
+        html = generate_html(args, df, num_changes, start_dt, finish_dt,
+                             team_projects, all_projects, team, teams)
         dir_path = os.path.join(args.output_dir, file_prefix)
-        file_name = 'index.html'
+        if team == 'All':
+            file_name = 'index.html'
+        else:
+            file_name = '%s.html' % re.sub(r'\W+', '_', team.lower())
         file_path = os.path.join(dir_path, file_name)
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
-        html = generate_html(args, df, num_changes, start_dt, finish_dt,
-                             df.keys(), all_projects, 'All')
         with open(file_path, 'w') as f:
             f.write(html)
-        log.info('Wrote %s', file_path)
+        log.info('Wrote %s for team: "%s"', file_path, team)
 
 
-def write_json(args, df, file_prefix):
-    dir_path = os.path.join(args.output_dir)
-    file_name = '%s.json' % file_prefix
-    file_path = os.path.join(dir_path, file_name)
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
-    df_as_json = generate_json(df)
-    with open(file_path, 'w') as f:
-        f.write(df_as_json)
-    log.info('Wrote %s', file_path)
+def gather_github_prs(args, oldest_timestamp, projects):
+    projects_github = [x['name'] for x in projects.get('github', dict())]
 
-
-def gather_github_prs(args, oldest_timestamp, projects_github):
     if len(projects_github) < 1:
         return 0, dict()
 
@@ -364,7 +311,9 @@ def gather_github_prs(args, oldest_timestamp, projects_github):
 
 
 # TODO add support for gerrit user and password (check if ever useful)
-def gather_gerrit_changes(args, oldest_timestamp, projects_gerrit):
+def gather_gerrit_changes(args, oldest_timestamp, projects):
+    projects_gerrit = [x['name'] for x in projects.get('gerrit', dict())]
+
     if len(projects_gerrit) < 1:
         return 0, dict()
 
@@ -741,13 +690,13 @@ def parse_pr_stats(args, prs, start_dt):
 
                 if 'recheck' in comment['body'].lower():
                     recheck[merged_ts] += 1
-                    log.info(
+                    log.debug(
                         'recheck updated to %d with %s',
                         recheck[merged_ts],
                         msg_details)
                 elif 'reverify' in comment['body'].lower():
                     reverify[merged_ts] += 1
-                    log.info(
+                    log.debug(
                         'reverify updated to %d with %s',
                         reverify[merged_ts],
                         msg_details)
@@ -836,7 +785,9 @@ def parse_ci_stats(changes, start_dt):
                     continue
 
                 updated_ts = change['updated']
-                if ci_run['status'] in ('succeeded', 'Successful', 'OK'):
+
+                status = re.sub(r'\W+', '', ci_run['status'].lower())
+                if status in ('succeeded', 'successful', 'ok'):
                     ci_success[updated_ts] += 1
                     log.debug(debug_msg('ci_success',
                                         ci_success[updated_ts],
@@ -845,7 +796,7 @@ def parse_ci_stats(changes, start_dt):
                                         message,
                                         ci_run['num'],
                                         'status: ' + ci_run['status']))
-                elif ci_run['status'] in ('failed', 'Failed'):
+                elif status in ('failed'):
                     ci_failure[updated_ts] += 1
                     log.debug(debug_msg('ci_failure',
                                         ci_failure[updated_ts],
@@ -921,7 +872,7 @@ def parse_pr_ci_stats(prs, start_dt):
         for comment in pr['comments']:
             log.debug('comment: %s', comment)
             ci_run = parse_pr_message(comment)
-            log.info('ci_run: %s', ci_run)
+            log.debug('ci_run: %s', ci_run)
             if ci_run:
                 log.debug(ci_run)
                 ci_run_ts = comment['created_at']
@@ -938,7 +889,9 @@ def parse_pr_ci_stats(prs, start_dt):
                     continue
 
                 updated_ts = pr['updated_at']
-                if ci_run['status'] in ('succeeded', 'Successful', 'OK'):
+
+                status = re.sub(r'\W+', '', ci_run['status'].lower())
+                if status in ('succeeded', 'successful', 'ok'):
                     ci_success[updated_ts] += 1
                     log.debug(debug_msg_pr('ci_success',
                                         ci_success[updated_ts],
@@ -947,7 +900,7 @@ def parse_pr_ci_stats(prs, start_dt):
                                         comment,
                                         None,
                                         'status: ' + ci_run['status']))
-                elif ci_run['status'] in ('failed', 'Failed'):
+                elif status in ('failed'):
                     ci_failure[updated_ts] += 1
                     log.debug(debug_msg_pr('ci_failure',
                                         ci_failure[updated_ts],
@@ -959,7 +912,8 @@ def parse_pr_ci_stats(prs, start_dt):
                 else:
                     # TODO add extra status to appropriate path above
                     log.warn('Unexpected status %s for %s on %s, skipping',
-                             ci_run['status'], None, pr['number'])
+                             ci_run['status'], pr['number'],
+                             pr['base']['repo']['full_name'])
                     continue
 
                 if pr['merged_at']:
