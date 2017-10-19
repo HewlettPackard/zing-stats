@@ -27,6 +27,8 @@ Terminology:
 - A CI run consists of one or CI jobs e.g. ncs-copyright, ncs-check and so on
 
 """
+# TODO remove duplication in parsing
+# TODO add in generic check for CI (allowing user to specify list of files to check for)
 from __future__ import division
 
 import argparse
@@ -144,6 +146,7 @@ def main():
                         help='JSON file listing gerrit projects to analyse.')
     parser.add_argument('--projects-github', dest='proj_github',
                         help='JSON file listing github projects to analyse.')
+    # TODO merge this into gerrit and github projects files now that we're providing those
     parser.add_argument('--project-map', dest='proj_map',
                         help='JSON file mapping projects to teams for html'
                              'reports (optional).')
@@ -1293,7 +1296,7 @@ def plot_changes(df_plot, group):
         name='Merged',
         x=df_plot.index,
         y=df_plot['merged'])
-    plot_title = "Changes (%s projects)" % group
+    plot_title = "Changes/PRs (%s projects)" % group
     changes_plot = plotly.offline.plot(
         {
             "data": [created_line, submitted_line],
