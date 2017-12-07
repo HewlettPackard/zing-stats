@@ -183,17 +183,9 @@ def main():
     github_pr_count, github_prs = gather_github_prs(args, start_dt, projects)
     change_count = gerrit_change_count + github_pr_count
 
-    df = dict()
-    for project in sorted(gerrit_changes):
-        df[project] = generate_dataframes_gerrit(gerrit_changes[project], start_dt)
-        log.debug('%s df:\n%s', project, df[project])
-
-    for project in sorted(github_prs):
-        df[project] = generate_dataframes_github(args, github_prs[project], start_dt)
-        log.debug('%s df:\n%s', project, df[project])
+    df[project] = generate_dataframes(args, gerrit_changes, github_prs, start_dt)
 
     if args.report_format == 'html':
-
         write_html(args, df, change_count, start_dt, finish_dt, projects)
 
 
@@ -208,8 +200,40 @@ def read_from_json(json_file):
     return json_data
 
 
-def write_html(args, df, num_changes, start_dt, finish_dt, projects):
+def generate_dataframes(args, changes, prs, start_dt):
+    """
+    Create pandas dataframes for data of interest for subsequent analysis
+    by different time periods.
+    """
 
+    df = dict()
+    for project in sorted(changes):
+        df_change_stats = parse_change_stats(changes[project], start_dt)
+        df_ci_stats = parse_ci_stats(changes[project], start_dt)
+        project_dataframe(df, df_change_stats, df_ci_stats, project)
+
+    for project in sorted(prs):
+        df_change_stats = parse_pr_stats(args, prs[project], start_dt)
+        df_ci_stats = parse_pr_ci_stats(prs[project], start_dt)
+        project_dataframe(df, df_change_stats, df_ci_stats, project)
+
+    return df
+
+
+def project_dataframe(df, df_change_stats, df_ci_stats, project):
+    if project in df:
+        log.error(
+            'Already processed %s, is the same project in gerrit and github?',
+            project)
+        exit(1)
+    df[project] = pd.concat([df_change_stats, df_ci_stats])
+    df[project].index = pd.to_datetime(df.index)
+    df[project].sort_index(inplace=True)
+    df[project].fillna(value=0, inplace=True)
+    log.debug('df[%s]:\n%s', project, df[project])
+
+
+def write_html(args, df, num_changes, start_dt, finish_dt, projects):
     teams_map = dict()
     teams_map['All'] = list()
     for project in projects['gerrit'] + projects['github']:
@@ -995,41 +1019,6 @@ def debug_msg_pr(field, counter, job_or_run, pr, comment, ci_name, ci_val):
         ci_name,
         ci_val)
     return msg
-
-
-def generate_dataframes_gerrit(changes, start_dt):
-    """
-    Create pandas dataframes for data of interest for subsequent analysis
-    by different time periods. Some data is only recorded for merged changes
-    as rolling updates of those changing stats are not useful in the authors
-    opinion.
-    """
-    df_change_stats = parse_change_stats(changes, start_dt)
-    df_ci_stats = parse_ci_stats(changes, start_dt)
-
-    df = pd.concat([df_change_stats, df_ci_stats])
-    df.index = pd.to_datetime(df.index)
-    df.sort_index(inplace=True)
-    df.fillna(value=0, inplace=True)
-
-    return df
-
-
-def generate_dataframes_github(args, prs, start_dt):
-    """
-    Create pandas dataframes for data of interest for subsequent analysis
-    by different time periods.
-    """
-    df_pr_stats = parse_pr_stats(args, prs, start_dt)
-    df_ci_stats = parse_pr_ci_stats(prs, start_dt)
-
-    df = pd.concat([df_pr_stats, df_ci_stats])
-
-    df.index = pd.to_datetime(df.index)
-    df.sort_index(inplace=True)
-    df.fillna(value=0, inplace=True)
-
-    return df
 
 
 def generate_html(args, df, num_changes, start_dt, finish_dt,
