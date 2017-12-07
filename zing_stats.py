@@ -179,7 +179,6 @@ def main():
 
     projects = read_from_json(args.projects)
 
-
     gerrit_change_count, gerrit_changes = gather_gerrit_changes(args, start_dt, projects)
     github_pr_count, github_prs = gather_github_prs(args, start_dt, projects)
     change_count = gerrit_change_count + github_pr_count
@@ -194,6 +193,7 @@ def main():
         log.debug('%s df:\n%s', project, df[project])
 
     if args.report_format == 'html':
+
         write_html(args, df, change_count, start_dt, finish_dt, projects)
 
 
@@ -276,8 +276,15 @@ def gather_github_prs(args, oldest_timestamp, projects):
                                         verify=args.verify_https_requests)
             log.debug(response.url)
             if response.status_code == 404:
-                log.error('Skipping %s (404 while listing PRs, try providing '
-                          '--github-user and --github-token)')
+                if args.github_user and args.github_token:
+                    log.error('Skipping %s (404 while listing PRs, the '
+                              '--github-user and --github-token specified '
+                              'don\'t have access to this project)', project)
+                else:
+                    log.error('Skipping %s (404 while listing PRs, try '
+                              'providing a --github-user and --github-token '
+                              'with access to this project)', project)
+                prs.pop(project)
                 break
             results = response.json()
             log.debug(json.dumps(results, sort_keys=True, indent=4,
@@ -304,8 +311,9 @@ def gather_github_prs(args, oldest_timestamp, projects):
                 query = next_page['url']
                 payload = None
 
-        log.info('Gathered %d PRs for %s', len(prs[project]), project)
-        total_prs += len(prs[project])
+        if project in prs:
+            log.info('Gathered %d PRs for %s', len(prs[project]), project)
+            total_prs += len(prs[project])
 
     log.info('Gathered %d total PRs', total_prs)
 
