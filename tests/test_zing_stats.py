@@ -56,7 +56,6 @@ def test_parse_gerrit_change_message():
     msg1 = zing_stats.parse_ci_job_comments(messages[1])
     assert msg1 == {}
     msg2 = zing_stats.parse_ci_job_comments(messages[2])
-    assert msg2['date'] == '2017-04-20 17:15:44.000000000'
     assert msg2['num'] == '1'
     assert msg2['status'] == 'succeeded'
     assert msg2['v_score'] == '+1'
