@@ -743,22 +743,22 @@ def parse_ci_stats(changes, start_dt):
                 status = re.sub(r'\W+', '', ci_run['status'].lower())
                 if status in ('succeeded', 'successful', 'ok'):
                     ci_success[updated_ts] += 1
-                    log.debug(debug_msg('ci_success',
-                                        ci_success[updated_ts],
-                                        'run',
-                                        change,
-                                        message,
-                                        ci_run['num'],
-                                        'status: ' + ci_run['status']))
+                    log.debug(debug_msg_gerrit('ci_success',
+                                               ci_success[updated_ts],
+                                               'run',
+                                               change,
+                                               message,
+                                               ci_run['num'],
+                                               'status: ' + ci_run['status']))
                 elif status in ('failed'):
                     ci_failure[updated_ts] += 1
-                    log.debug(debug_msg('ci_failure',
-                                        ci_failure[updated_ts],
-                                        'run',
-                                        change,
-                                        message,
-                                        ci_run['num'],
-                                        'status: ' + ci_run['status']))
+                    log.debug(debug_msg_gerrit('ci_failure',
+                                               ci_failure[updated_ts],
+                                               'run',
+                                               change,
+                                               message,
+                                               ci_run['num'],
+                                               'status: ' + ci_run['status']))
                 else:
                     # TODO add extra status to appropriate path above
                     log.warn('Unexpected status %s for %s on %s, skipping',
@@ -770,13 +770,14 @@ def parse_ci_stats(changes, start_dt):
                     for ci_job in ci_run['jobs']:
                         ci_total_time_sec[merged_ts] += ci_job[
                             'total_sec']
-                        log.debug(debug_msg('ci_total_time_sec',
-                                            ci_total_time_sec[merged_ts],
-                                            'job',
-                                            change,
-                                            message,
-                                            ci_job['name'],
-                                            str(ci_job['total_sec']) + 's'))
+                        log.debug(debug_msg_gerrit('ci_total_time_sec',
+                                                   ci_total_time_sec[merged_ts],
+                                                   'job',
+                                                   change,
+                                                   message,
+                                                   ci_job['name'],
+                                                   str(ci_job[
+                                                           'total_sec']) + 's'))
 
                         # this could end up being the longest job across
                         # multiple changes if two changes merge at the same
@@ -787,15 +788,15 @@ def parse_ci_stats(changes, start_dt):
                                 ci_longest_time_sec[merged_ts]):
                             ci_longest_time_sec[merged_ts] = ci_job[
                                 'total_sec']
-                            log.debug(debug_msg('ci_longest_time_sec',
-                                                ci_longest_time_sec[
-                                                    merged_ts],
-                                                'job',
-                                                change,
-                                                message,
-                                                ci_job['name'],
-                                                str(ci_job[
-                                                        'total_sec']) + 's'))
+                            log.debug(debug_msg_gerrit('ci_longest_time_sec',
+                                                       ci_longest_time_sec[
+                                                           merged_ts],
+                                                       'job',
+                                                       change,
+                                                       message,
+                                                       ci_job['name'],
+                                                       str(ci_job[
+                                                               'total_sec']) + 's'))
 
     d = {'ci_total_time_sec': ci_total_time_sec,
          'ci_longest_time_sec': ci_longest_time_sec,
@@ -847,7 +848,7 @@ def parse_pr_ci_stats(prs, start_dt):
                 status = re.sub(r'\W+', '', ci_run['status'].lower())
                 if status in ('succeeded', 'successful', 'ok'):
                     ci_success[updated_ts] += 1
-                    log.debug(debug_msg_pr('ci_success',
+                    log.debug(debug_msg_github('ci_success',
                                         ci_success[updated_ts],
                                         'run',
                                         pr,
@@ -856,7 +857,7 @@ def parse_pr_ci_stats(prs, start_dt):
                                         'status: ' + ci_run['status']))
                 elif status in ('failed'):
                     ci_failure[updated_ts] += 1
-                    log.debug(debug_msg_pr('ci_failure',
+                    log.debug(debug_msg_github('ci_failure',
                                         ci_failure[updated_ts],
                                         'run',
                                         pr,
@@ -875,7 +876,7 @@ def parse_pr_ci_stats(prs, start_dt):
                     for ci_job in ci_run['jobs']:
                         ci_total_time_sec[merged_ts] += ci_job[
                             'total_sec']
-                        log.debug(debug_msg_pr('ci_total_time_sec',
+                        log.debug(debug_msg_github('ci_total_time_sec',
                                             ci_total_time_sec[merged_ts],
                                             'job',
                                             pr,
@@ -892,7 +893,7 @@ def parse_pr_ci_stats(prs, start_dt):
                                 ci_longest_time_sec[merged_ts]):
                             ci_longest_time_sec[merged_ts] = ci_job[
                                 'total_sec']
-                            log.debug(debug_msg_pr('ci_longest_time_sec',
+                            log.debug(debug_msg_github('ci_longest_time_sec',
                                                 ci_longest_time_sec[
                                                     merged_ts],
                                                 'job',
@@ -913,29 +914,29 @@ def parse_pr_ci_stats(prs, start_dt):
     return df
 
 
-# Looks klunky but the debug message is very useful for verification
-def debug_msg(field, counter, job_or_run, change, message, ci_name, ci_val):
+def debug_msg_gerrit(field, counter, job_or_run, change, message,
+                     ci_name, ci_val):
+    return debug_msg(field, counter, job_or_run, change['project'],
+                     change['change_id'], message['_revision_number'], ci_name,
+                     ci_val)
+
+
+def debug_msg_github(field, counter, job_or_run, pr, comment,
+                     ci_name, ci_val):
+    return debug_msg(field, counter, job_or_run,
+                     pr['base']['repo']['full_name'], pr['id'], comment['id'],
+                     ci_name, ci_val)
+
+
+def debug_msg(field, counter, job_or_run, project_name, change_id, message_id,
+              ci_name, ci_val):
     msg = '%s updated to %d with proj|change|rev|%s: %s|%s|%s|%s and %s' % (
         field,
         counter,
         job_or_run,
-        change['project'],
-        change['change_id'],
-        message['_revision_number'],
-        ci_name,
-        ci_val)
-    return msg
-
-
-# Looks klunky but the debug message is very useful for verification
-def debug_msg_pr(field, counter, job_or_run, pr, comment, ci_name, ci_val):
-    msg = '%s updated to %d with proj|change|rev|%s: %s|%s|%s|%s and %s' % (
-        field,
-        counter,
-        job_or_run,
-        pr['base']['repo']['full_name'],
-        pr['id'],
-        comment['id'],
+        project_name,
+        change_id,
+        message_id,
         ci_name,
         ci_val)
     return msg
