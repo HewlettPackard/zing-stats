@@ -90,7 +90,5 @@ ENV/
 .ropeproject
 .idea
 
-# zing files
-projects_gerrit.json
-projects_github.json
-projects.json
+# zing-stats config files
+projects*.json
