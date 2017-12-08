@@ -183,7 +183,7 @@ def main():
     github_pr_count, github_prs = gather_github_prs(args, start_dt, projects)
     change_count = gerrit_change_count + github_pr_count
 
-    df[project] = generate_dataframes(gerrit_changes, github_prs, start_dt)
+    df = generate_dataframes(args, gerrit_changes, github_prs, start_dt)
 
     if args.report_format == 'html':
         write_html(args, df, change_count, start_dt, finish_dt, projects)
@@ -200,7 +200,7 @@ def read_from_json(json_file):
     return json_data
 
 
-def generate_dataframes(changes, prs, start_dt):
+def generate_dataframes(args, changes, prs, start_dt):
     """
     Create pandas dataframes for data of interest for subsequent analysis
     by different time periods.
@@ -208,12 +208,14 @@ def generate_dataframes(changes, prs, start_dt):
 
     df = dict()
     for project in sorted(changes):
-        df_change_stats = parse_change_stats(changes[project], start_dt)
+        df_change_stats = parse_change_stats(args, changes[project], start_dt,
+                                            GERRIT_TIMESTAMP, parse_change)
         df_ci_stats = parse_ci_stats(changes[project], start_dt)
         project_dataframe(df, df_change_stats, df_ci_stats, project)
 
     for project in sorted(prs):
-        df_change_stats = parse_pr_stats(prs[project], start_dt)
+        df_change_stats = parse_change_stats(args, prs[project], start_dt,
+                                            GITHUB_TIMESTAMP, parse_pr)
         df_ci_stats = parse_pr_ci_stats(prs[project], start_dt)
         project_dataframe(df, df_change_stats, df_ci_stats, project)
 
@@ -533,7 +535,7 @@ def parse_pr_message(msg):
     return run
 
 
-def parse_change_stats(changes, start_dt, ts_format=GERRIT_TIMESTAMP):
+def parse_change_stats(args, changes, start_dt, ts_format, change_parser):
     """
     Returns a pandas DataFrame with
         a count of changes created
@@ -553,59 +555,9 @@ def parse_change_stats(changes, start_dt, ts_format=GERRIT_TIMESTAMP):
     reverify = defaultdict(int)
 
     for change_id in changes:
-        change = changes[change_id]
-        created_ts = change['created']
-        created_dt = datetime.strptime(created_ts[:-3], ts_format)
-        change['created_dt'] = created_dt
-
-        updated_ts = change['updated']
-        updated_dt = datetime.strptime(updated_ts[:-3], ts_format)
-        change['updated_dt'] = updated_dt
-
-        merged_ts = get_merged_timestamp(change)
-        merged_dt = datetime.strptime(merged_ts[:-3], ts_format)
-        change['merged_dt'] = merged_dt
-
-        msg_details = 'project|id: %s|%s' % (
-            change['project'], change_id)
-        if created_dt >= start_dt:
-            created[created_ts] += 1
-            log.debug('created set to %d with %s',
-                      created[created_ts],
-                      msg_details)
-        if updated_dt >= start_dt:
-            updated[updated_ts] += 1
-            log.debug('updated set to %d with %s',
-                      updated[updated_ts],
-                      msg_details)
-        if change['status'] == 'MERGED' and merged_dt >= start_dt:
-            merged[merged_ts] += 1
-            log.debug('merged set to %d with %s',
-                      merged[merged_ts],
-                      msg_details)
-            revisions[merged_ts] = len(change['revisions'])
-
-            lifespan_sec[merged_ts] = (
-                merged_dt - created_dt).total_seconds()
-            log.debug('change lifespan set to %d with %s',
-                      lifespan_sec[merged_ts],
-                      msg_details)
-
-            for message in change['messages']:
-                msg_details = 'project|change|rev: %s|%s|%s' % (
-                    change['project'], change_id, message['_revision_number'])
-                if 'recheck' in message['message'].lower():
-                    recheck[merged_ts] += 1
-                    log.debug(
-                        'recheck updated to %d with %s',
-                        recheck[merged_ts],
-                        msg_details)
-                elif 'reverify' in message['message'].lower():
-                    reverify[merged_ts] += 1
-                    log.debug(
-                        'reverify updated to %d with %s',
-                        reverify[merged_ts],
-                        msg_details)
+        change_parser(args, change_id, changes, created, lifespan_sec, merged,
+                      recheck, reverify, revisions, start_dt, ts_format,
+                      updated)
 
     d = {'created': created,
          'updated': updated,
@@ -628,117 +580,127 @@ def parse_change_stats(changes, start_dt, ts_format=GERRIT_TIMESTAMP):
     return df
 
 
-def parse_pr_stats(prs, start_dt, ts_format=GITHUB_TIMESTAMP):
-    """
-    Returns a pandas DataFrame with
-        a count of PRs created
-        a count of PRs updated
-        a count of PRs merged
-        a count of commits for each merged PR
-        lifespan of each merged PR (from creation to merging)
-        recheck and reverify counts for each merged change
-    from the json list of PRs passed
+def parse_change(args, change_id, changes, created, lifespan_sec, merged, recheck,
+                 reverify, revisions, start_dt, ts_format, updated):
+    change = changes[change_id]
+    created_ts = change['created']
+    created_dt = datetime.strptime(created_ts[:-3], ts_format)
+    change['created_dt'] = created_dt
+    updated_ts = change['updated']
+    updated_dt = datetime.strptime(updated_ts[:-3], ts_format)
+    change['updated_dt'] = updated_dt
+    merged_ts = get_merged_timestamp(change)
+    merged_dt = datetime.strptime(merged_ts[:-3], ts_format)
+    change['merged_dt'] = merged_dt
+    msg_details = 'project|id: %s|%s' % (
+        change['project'], change_id)
+    if created_dt >= start_dt:
+        created[created_ts] += 1
+        log.debug('created set to %d with %s',
+                  created[created_ts],
+                  msg_details)
+    if updated_dt >= start_dt:
+        updated[updated_ts] += 1
+        log.debug('updated set to %d with %s',
+                  updated[updated_ts],
+                  msg_details)
+    if change['status'] == 'MERGED' and merged_dt >= start_dt:
+        merged[merged_ts] += 1
+        log.debug('merged set to %d with %s',
+                  merged[merged_ts],
+                  msg_details)
+        revisions[merged_ts] = len(change['revisions'])
 
-    Updates PR with various additional fields including comments and commits
-    """
-    created = defaultdict(int)
-    updated = defaultdict(int)
-    merged = defaultdict(int)
-    revisions = dict()
-    lifespan_sec = dict()
-    recheck = defaultdict(int)
-    reverify = defaultdict(int)
+        lifespan_sec[merged_ts] = (
+            merged_dt - created_dt).total_seconds()
+        log.debug('change lifespan set to %d with %s',
+                  lifespan_sec[merged_ts],
+                  msg_details)
 
-    for pr_id in prs:
-        pr = prs[pr_id]
-        created_ts = pr['created_at']
-        created_dt = datetime.strptime(created_ts, ts_format)
-        pr['created_dt'] = created_dt
+        for message in change['messages']:
+            msg_details = 'project|change|rev: %s|%s|%s' % (
+                change['project'], change_id, message['_revision_number'])
+            if 'recheck' in message['message'].lower():
+                recheck[merged_ts] += 1
+                log.debug(
+                    'recheck updated to %d with %s',
+                    recheck[merged_ts],
+                    msg_details)
+            elif 'reverify' in message['message'].lower():
+                reverify[merged_ts] += 1
+                log.debug(
+                    'reverify updated to %d with %s',
+                    reverify[merged_ts],
+                    msg_details)
 
-        updated_ts = pr['updated_at']
-        updated_dt = datetime.strptime(updated_ts, ts_format)
-        pr['updated_dt'] = updated_dt
 
-        merged_ts = pr['merged_at']
+def parse_pr(args, pr_id, prs, created, lifespan_sec, merged, recheck, reverify,
+             revisions, start_dt, ts_format, updated):
+    pr = prs[pr_id]
+    created_ts = pr['created_at']
+    created_dt = datetime.strptime(created_ts, ts_format)
+    pr['created_dt'] = created_dt
+    updated_ts = pr['updated_at']
+    updated_dt = datetime.strptime(updated_ts, ts_format)
+    pr['updated_dt'] = updated_dt
+    merged_ts = pr['merged_at']
+    if pr['merged_at']:
         merged_dt = datetime.strptime(merged_ts, ts_format)
         pr['merged_dt'] = merged_dt
+    # Assume we won't have more than 250 commits on a PR for now ...
+    commits = github_query(args, pr['commits_url'])
+    log.debug('commits: %s',
+              json.dumps(commits, sort_keys=True, indent=4,
+                         separators=(',', ': ')))
+    pr['commits'] = commits
+    comments = github_query(args, pr['comments_url'])
+    log.debug('comments: %s',
+              json.dumps(comments, sort_keys=True, indent=4,
+                         separators=(',', ': ')))
+    pr['comments'] = comments
+    msg_details = 'project|pr|id: %s|%s|%s' % (
+        pr['base']['repo']['full_name'], pr['number'], pr_id)
+    if created_dt >= start_dt:
+        created[created_ts] += 1
+        log.debug('created set to %d with %s',
+                  created[created_ts],
+                  msg_details)
+    if updated_dt >= start_dt:
+        updated[updated_ts] += 1
+        log.debug('updated set to %d with %s',
+                  updated[updated_ts],
+                  msg_details)
+    if pr['merged_at'] and merged_dt >= start_dt:
+        merged[merged_ts] += 1
+        log.debug('merged set to %d with %s',
+                  merged[merged_ts],
+                  msg_details)
 
-        # Assume we won't have more than 250 commits on a PR for now ...
-        commits = github_query(args, pr['commits_url'])
-        log.debug('commits: %s',
-                  json.dumps(commits, sort_keys=True, indent=4,
-                             separators=(',', ': ')))
-        pr['commits'] = commits
+        revisions[merged_ts] = len(commits)
 
-        comments = github_query(args, pr['comments_url'])
-        log.debug('comments: %s',
-                  json.dumps(comments, sort_keys=True, indent=4,
-                             separators=(',', ': ')))
-        pr['comments'] = comments
+        lifespan_sec[merged_ts] = (
+            merged_dt - created_dt).total_seconds()
+        log.debug('pr lifespan set to %d with %s',
+                  lifespan_sec[merged_ts],
+                  msg_details)
 
-        msg_details = 'project|pr|id: %s|%s|%s' % (
-            pr['base']['repo']['full_name'], pr['number'], pr_id)
-        if created_dt >= start_dt:
-            created[created_ts] += 1
-            log.debug('created set to %d with %s',
-                      created[created_ts],
-                      msg_details)
-        if updated_dt >= start_dt:
-            updated[updated_ts] += 1
-            log.debug('updated set to %d with %s',
-                      updated[updated_ts],
-                      msg_details)
-        if pr['merged_at'] and merged_dt >= start_dt:
-            merged[merged_ts] += 1
-            log.debug('merged set to %d with %s',
-                      merged[merged_ts],
-                      msg_details)
+        for comment in comments:
+            msg_details = 'project|pr|id|comment: %s|%s|%s|%s' % (
+                pr['base']['repo']['full_name'], pr['number'], pr_id,
+                comment['id'])
 
-            revisions[merged_ts] = len(commits)
-
-            lifespan_sec[merged_ts] = (
-                merged_dt - created_dt).total_seconds()
-            log.debug('pr lifespan set to %d with %s',
-                      lifespan_sec[merged_ts],
-                      msg_details)
-
-            for comment in comments:
-                msg_details = 'project|pr|id|comment: %s|%s|%s|%s' % (
-                    pr['base']['repo']['full_name'], pr['number'], pr_id,
-                    comment['id'])
-
-                if 'recheck' in comment['body'].lower():
-                    recheck[merged_ts] += 1
-                    log.debug(
-                        'recheck updated to %d with %s',
-                        recheck[merged_ts],
-                        msg_details)
-                elif 'reverify' in comment['body'].lower():
-                    reverify[merged_ts] += 1
-                    log.debug(
-                        'reverify updated to %d with %s',
-                        reverify[merged_ts],
-                        msg_details)
-
-    d = {'created': created,
-         'updated': updated,
-         'merged': merged,
-         'revisions': revisions,
-         'lifespan_sec': lifespan_sec,
-         'recheck': recheck,
-         'reverify': reverify}
-
-    # specify columns to enforce order, easier for debugging
-    df = pd.DataFrame(d,
-                      columns=['created',
-                               'updated',
-                               'merged',
-                               'revisions',
-                               'lifespan_sec',
-                               'recheck',
-                               'reverify'])
-    log.debug('activity df:\n%s', df)
-    return df
+            if 'recheck' in comment['body'].lower():
+                recheck[merged_ts] += 1
+                log.debug(
+                    'recheck updated to %d with %s',
+                    recheck[merged_ts],
+                    msg_details)
+            elif 'reverify' in comment['body'].lower():
+                reverify[merged_ts] += 1
+                log.debug(
+                    'reverify updated to %d with %s',
+                    reverify[merged_ts],
+                    msg_details)
 
 
 def github_query(args, query_url):
