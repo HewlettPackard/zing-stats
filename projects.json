@@ -1,0 +1,16 @@
+{ "github" : [
+        {
+            "name": "kubernetes/kubernetes",
+            "description": "kubernetes",
+            "team": "kubernetes team"
+        }
+    ],
+    "gerrit" : [
+        {
+            "name": "openstack/cinder",
+            "description": "openstack cinder",
+            "team": "cinder core team"
+        }
+    ]
+}
+
