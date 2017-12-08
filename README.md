@@ -33,8 +33,8 @@ Example output of detailed stats section
 
 1. ```git clone <url to zing-stats repo>```
 2. ```sudo apt install virtualenv```
-3. ```virtualenv ~/virt_env/zing```
-4. ```. ~/virt_env/zing/bin/activate```
+3. ```virtualenv ~/venv/zing-stats```
+4. ```. ~/venv/zing-stats/bin/activate```
 5. ```pip install -r requirements.txt```
 
 ## Running

@@ -82,7 +82,7 @@
                         {% if group == current_group %}
                             {% set is_active = 'class="active"' %}
                         {% endif %}
-                        <li role="presentation" {{ is_active }}><a href="{{ url }}.html">{{ group }}</a></li>
+                        <li role="presentation" {{ is_active }}><a href="{{ url|replace(" ", "_") }}.html">{{ group }}</a></li>
                     {% endfor %}
                 </ul>
             </div>
@@ -103,19 +103,17 @@
                     <table class="table table-striped">
                         <tr>
                             <th>Project</th>
-                            <th>Changes created</th>
-                            <th>Changes updated</th>
-                            <th>Changes merged</th>
-                            <th>Patches /change (mean)</th>
+                            <th>Changes/PRs created</th>
+                            <th>Changes/PRs updated</th>
+                            <th>Changes/PRs merged</th>
+                            <th>Patches/Commits per change/PR (mean)</th>
                             <th>CI time (total)</th>
                             <th>CI longest job duration (max)</th>
                             <th>CI run success</th>
                             <th>CI run failure</th>
-                            <th>Change lifespan (mean)</th>
+                            <th>Change/PR lifespan (mean)</th>
                             <th>Recheck count (mean)</th>
                             <th>Reverify count (mean)</th>
-                            <th>Has CI check</th>
-                            <th>Has CI gate</th>
                         </tr>
                         <tr>
                             <th>Total</th>
@@ -138,8 +136,6 @@
                             <th>{{ '%0.1f' % (df['total']['lifespan_sec'].mean()/3600)|float }} hour</th>
                             <th>{{ '%0.1f' % df['total']['recheck'].mean()|float }}</th>
                             <th>{{ '%0.1f' % df['total']['reverify'].mean()|float }}</th>
-                            <th>n/a</th>
-                            <th>n/a</th>
                         </tr>
 
                         {% for project in projects_to_report|sort if project != 'total' %}
@@ -164,20 +160,6 @@
                                 <td>{{ '%0.1f' % (df[project]['lifespan_sec'].mean()/3600)|float }} hour</td>
                                 <td>{{ '%0.1f' % df[project]['recheck'].mean()|float }}</td>
                                 <td>{{ '%0.1f' % df[project]['reverify'].mean()|float }}</td>
-                                <td>
-                                {% if all_projects[project]['ci_check'] %}
-                                    Y
-                                {% else %}
-                                    N
-                                {% endif %}
-                                </td>
-                                <td>
-                                {% if all_projects[project]['ci_gate'] %}
-                                    Y
-                                {% else %}
-                                    N
-                                {% endif %}
-                                </td>
                             </tr>
                         {% endfor %}
                     </table>

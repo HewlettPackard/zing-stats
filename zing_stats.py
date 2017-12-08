@@ -27,6 +27,8 @@ Terminology:
 - A CI run consists of one or CI jobs e.g. ncs-copyright, ncs-check and so on
 
 """
+# TODO remove duplication in parsing
+# TODO add in generic check for CI (allowing user to specify list of files to check for)
 from __future__ import division
 
 import argparse
@@ -45,10 +47,17 @@ import re
 import requests
 import sys
 
+CI_FAILURE_STATUSES = ['failed']
+CI_SUCCESS_STATUSES = ['succeeded', 'successful', 'ok']
+
 # need to drop last few digits to make microseconds from nanoseconds
 # e.g. datetime.strptime(change['created'][:-3], GERRIT_TIMESTAMP)
 GERRIT_TIMESTAMP = '%Y-%m-%d %H:%M:%S.%f'
+
+GITHUB_TIMESTAMP = '%Y-%m-%dT%H:%M:%SZ'
+
 ISSUES_URL = 'https://github.com/HewlettPackard/zing-stats/issues'
+
 
 log = logging.getLogger(__name__)
 
@@ -67,7 +76,9 @@ def main():
                "# retrieve stats for last 24 hours and dump to changes.json\n"
                "./zing_stats.py -r 168 -c > changes.json\n"
                "# analyse stats previously gathered in changes.json\n"
-               "./zing_stats.py -r 168 -j changes.json\n",
+               "./zing_stats.py -r 168 -j changes.json\n"
+               "# analyse a set of gerrit and github projects with github auth\n"
+               "./zing_stats.py --github-host https://github.example.com --github-user username --github-token 3ec57a --gerrit-host https://gerrit.example.com --projects projects.json\n",
         formatter_class=argparse.RawDescriptionHelpFormatter)
     script_name = __file__
     parser.set_defaults(
@@ -78,9 +89,17 @@ def main():
                         help='Gerrit host (def: %(default)s).')
     parser.add_argument('--gerrit-user', dest='gerrit_user',
                         default=os.environ['LOGNAME'],
-                        help='Gerrit username (def: %(default)s).')
-    parser.add_argument('--gerrit-pass', dest='gerrit_pass',
-                        help='Gerrit HTTP password (def: %(default)s).')
+                        help='Auth username (def: %(default)s).')
+    parser.add_argument('--gerrit-token', dest='gerrit_token',
+                        help='Auth token or password.')
+    parser.add_argument('--github-host', dest='github_url',
+                        default='https://github.example.net',
+                        help='Github host (def: %(default)s).')
+    parser.add_argument('--github-user', dest='github_user',
+                        default=os.environ['LOGNAME'],
+                        help='Auth username (def: %(default)s).')
+    parser.add_argument('--github-token', dest='github_token',
+                        help='Auth token or password def: %(default)s).')
     parser.add_argument('-n', '--gerrit-query-size', dest='gerrit_query_size',
                         type=int, default=100,
                         help='Changes per request (def: %(default)s).')
@@ -90,10 +109,13 @@ def main():
                         help='Total max changes to pull (optional, no def).')
     parser.add_argument('-v', '--verbose', dest='log_verbosely',
                         action='store_true',
-                        help='Show DEBUG level log output.')
+                        help='Show DEBUG level log output on stderr.')
     parser.add_argument('-q', '--quiet', dest='log_quietly',
                         action='store_true',
-                        help='Show only ERROR log messages.')
+                        help='Show only ERROR log messages on stderr.')
+    parser.add_argument('-t', '--trace', dest='log_trace',
+                        action='store_true',
+                        help='Show TRACE level output in logfile.')
     parser.add_argument('-l', '--logfile',
                         help='''
                         Name of the file to log messages to
@@ -111,7 +133,7 @@ def main():
                         help='Verify https requests (def: %(default)s).')
     parser.add_argument('-f', '--format', dest='report_format',
                         help='report format (def: %(default)s)',
-                        choices=['html', 'json'],
+                        choices=['html'],
                         default='html')
     parser.add_argument('--report-issue-link', dest='report_issue_link',
                         default=ISSUES_URL,
@@ -125,16 +147,10 @@ def main():
     parser.add_argument('-r', '--report-range-hours', dest='range_hours',
                         type=int, default=168,
                         help='Range for report in hours (def: %(default)s).')
-    parser.add_argument('-c', '--collect-only', dest='collect_only',
-                        action='store_true',
-                        help='Collect data only, no analysis')
-    parser.add_argument('-j', '--json-input', dest='json_input',
-                        help='JSON file containing changes to analyse '
-                             '(optional, disables querying if specified')
-    parser.add_argument('-p', '--project-map', dest='proj_map',
-                        help='JSON file mapping projects to teams for html'
-                             'reports (optional).')
-    parser.add_argument('-t', '--html-template', dest='html_template',
+    parser.add_argument('--projects', dest='projects',
+                        required=True,
+                        help='JSON file listing projects to analyse.')
+    parser.add_argument('--html-template', dest='html_template',
                         default=os.path.join(parser.get_default('script_dir'),
                                              'zing_stats.html.j2'),
                         help='Jinja2 template to use for html reports '
@@ -164,119 +180,186 @@ def main():
              start_dt.strftime('%H:%M:%S %d-%b-%Y'),
              finish_dt.strftime('%H:%M:%S %d-%b-%Y'))
 
-    projects = gather_projects(args)
-    log.debug(projects)
+    projects = read_from_json(args.projects)
 
-    changes = gather_changes(args, start_dt)
+    gerrit_change_count, gerrit_changes = gather_gerrit_changes(args, start_dt, projects)
+    github_pr_count, github_prs = gather_github_prs(args, start_dt, projects)
+    change_count = gerrit_change_count + github_pr_count
 
-    if args.collect_only:
-        print(json.dumps(changes, sort_keys=True, indent=4,
-                         separators=(',', ': ')))
-        exit(0)
+    df = generate_dataframes(args, gerrit_changes, github_prs, start_dt)
 
-    # split into buckets per project
-    changes_by_proj = get_changes_by_project(changes)
+    if args.report_format == 'html':
+        write_html(args, df, change_count, start_dt, finish_dt, projects)
+
+
+def read_from_json(json_file):
+    with open(json_file, 'r') as f:
+        data = f.read()
+    try:
+        json_data = json.loads(data)
+    except ValueError:
+        log.critical('%s is not well-formed json', json_file)
+        exit(1)
+    return json_data
+
+
+def generate_dataframes(args, changes, prs, start_dt):
+    """
+    Create pandas dataframes for data of interest for subsequent analysis
+    by different time periods.
+    """
 
     df = dict()
-    for project in sorted(changes_by_proj):
-        df[project] = generate_dataframes(changes_by_proj[project], start_dt)
-        log.debug('%s df:\n%s', project, df[project])
+    for project in sorted(changes):
+        df_change_stats = parse_change_stats(args, changes[project], start_dt,
+                                            GERRIT_TIMESTAMP, parse_change)
+        df_ci_stats = parse_ci_stats(changes[project], start_dt)
+        project_dataframe(df, df_change_stats, df_ci_stats, project)
 
-    proj_map = None
-    if args.proj_map:
-        log.info('Reading project/team mappings from %s', args.proj_map)
-        with open(args.proj_map, 'r') as f:
-            json_data = f.read()
-        try:
-            proj_map = json.loads(json_data)
-        except ValueError:
-            log.critical('%s is not well-formed json', args.proj_map)
-            exit(1)
+    for project in sorted(prs):
+        df_change_stats = parse_change_stats(args, prs[project], start_dt,
+                                            GITHUB_TIMESTAMP, parse_pr)
+        df_ci_stats = parse_pr_ci_stats(prs[project], start_dt)
+        project_dataframe(df, df_change_stats, df_ci_stats, project)
+
+    return df
+
+
+def project_dataframe(df, df_change_stats, df_ci_stats, project):
+    if project in df:
+        log.error(
+            'Already processed %s, is the same project in gerrit and github?',
+            project)
+        exit(1)
+    df[project] = pd.concat([df_change_stats, df_ci_stats])
+    df[project].index = pd.to_datetime(df[project].index)
+    df[project].sort_index(inplace=True)
+    df[project].fillna(value=0, inplace=True)
+    log.debug('df[%s]:\n%s', project, df[project])
+
+
+def write_html(args, df, num_changes, start_dt, finish_dt, projects):
+    teams_map = dict()
+    teams_map['All'] = list()
+    for project in projects['gerrit'] + projects['github']:
+        team = project['team']
+        name = project['name']
+        if team not in teams_map:
+            teams_map[team] = list()
+        if name not in teams_map['All']:
+            teams_map['All'].append(name)
+        if name not in teams_map[team]:
+            teams_map[team].append(name)
+    log.debug('teams map: %s', teams_map)
 
     if args.range_hours <= 24:
         file_prefix = 'last_%dh' % args.range_hours
     else:
         file_prefix = 'last_%gd' % round((args.range_hours / 24), 1)
-
-    if args.report_format == 'html':
-        write_html(args, df, file_prefix, len(changes), start_dt, finish_dt,
-                   projects, proj_map)
-
-    elif args.report_format == 'json':
-        write_json(args, df, file_prefix)
-
-
-def write_html(args, df, file_prefix, num_changes, start_dt, finish_dt,
-               all_projects, proj_map):
-    if proj_map:
-        # convert project maps to groups into group map to projects
-        group_map = dict()
-        for group in set(proj_map.values()):
-            group_map[group] = list()
-            for project in proj_map:
-                if proj_map[project] == group:
-                    group_map[group].append(project)
-
-        # and add an all group for all projects
-        group_map['All'] = proj_map.keys()
-        log.debug('group_map: %s', group_map)
-
-        for group in group_map:
-            projects = group_map[group]
-            groups = group_map.keys()
-            html = generate_html(args, df, num_changes, start_dt, finish_dt,
-                                 projects, all_projects, group, groups)
-            dir_path = os.path.join(args.output_dir, file_prefix)
-            if group == 'All':
-                file_name = 'index.html'
-            else:
-                file_name = '%s.html' % group.lower()
-            file_path = os.path.join(dir_path, file_name)
-            if not os.path.exists(dir_path):
-                os.makedirs(dir_path)
-            with open(file_path, 'w') as f:
-                f.write(html)
-            log.info('Wrote %s for %s group', file_path, group)
-    else:
+    all_projects = teams_map['All']
+    for team in sorted(teams_map):
+        team_projects = teams_map[team]
+        teams = teams_map.keys()
+        html = generate_html(args, df, num_changes, start_dt, finish_dt,
+                             team_projects, all_projects, team, teams)
         dir_path = os.path.join(args.output_dir, file_prefix)
-        file_name = 'index.html'
+        if team == 'All':
+            file_name = 'index.html'
+        else:
+            file_name = '%s.html' % re.sub(r'\W+', '_', team.lower())
         file_path = os.path.join(dir_path, file_name)
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
-        html = generate_html(args, df, num_changes, start_dt, finish_dt,
-                             df.keys(), all_projects, 'All')
         with open(file_path, 'w') as f:
             f.write(html)
-        log.info('Wrote %s', file_path)
+        log.info('Wrote %s for team: "%s"', file_path, team)
 
 
-def write_json(args, df, file_prefix):
-    dir_path = os.path.join(args.output_dir)
-    file_name = '%s.json' % file_prefix
-    file_path = os.path.join(dir_path, file_name)
-    if not os.path.exists(dir_path):
-        os.makedirs(dir_path)
-    df_as_json = generate_json(df)
-    with open(file_path, 'w') as f:
-        f.write(df_as_json)
-    log.info('Wrote %s', file_path)
+def gather_github_prs(args, oldest_timestamp, projects):
+    projects_github = [x['name'] for x in projects.get('github', dict())]
+
+    if len(projects_github) < 1:
+        return 0, dict()
+
+    log.info('Gathering PRs from %s for %s', args.github_url,
+             ', '.join(sorted(projects_github)))
+    total_prs = 0
+    prs = dict()
+    for project in projects_github:
+        prs[project] = dict()
+
+        project_finished = False
+        next_page = True
+
+        payload = {'state': 'all', 'sort': 'updated', 'direction': 'dsc'}
+        query = ('%s/api/v3/repos/%s/pulls'
+                 % (args.github_url, project))
+        while next_page:
+            if args.github_user and args.github_token:
+                response = requests.get(
+                    query, params=payload,
+                    verify=args.verify_https_requests,
+                    auth=(args.github_user, args.github_token))
+            else:
+                response = requests.get(query, params=payload,
+                                        verify=args.verify_https_requests)
+            log.debug(response.url)
+            if response.status_code == 404:
+                if args.github_user and args.github_token:
+                    log.error('Skipping %s (404 while listing PRs, the '
+                              '--github-user and --github-token specified '
+                              'don\'t have access to this project)', project)
+                else:
+                    log.error('Skipping %s (404 while listing PRs, try '
+                              'providing a --github-user and --github-token '
+                              'with access to this project)', project)
+                prs.pop(project)
+                break
+            results = response.json()
+            # TODO use functools and helper function to have log.debug() only
+            # resolve the json.dumps() if needed (all usages of this pattern)
+            log.debug(json.dumps(results, sort_keys=True, indent=4,
+                                 separators=(',', ': ')))
+            for pr in results:
+                log.debug(json.dumps(pr, sort_keys=True, indent=4,
+                                     separators=(',', ': ')))
+                current_timestamp = datetime.strptime(pr['updated_at'],
+                                                      GITHUB_TIMESTAMP)
+                if current_timestamp < oldest_timestamp:
+                    log.debug('%s is older than %s, skip further PRs for %s',
+                              current_timestamp, oldest_timestamp, project)
+                    results[-1].pop('_more_changes', None)
+
+                    project_finished = True
+                    break
+                prs[project][pr['id']] = pr
+
+            if project_finished:
+                break
+
+            next_page = response.links.get('next', False)
+            if next_page:
+                query = next_page['url']
+                payload = None
+
+        if project in prs:
+            log.info('Gathered %d PRs for %s', len(prs[project]), project)
+            total_prs += len(prs[project])
+
+    log.info('Gathered %d total PRs', total_prs)
+
+    return total_prs, prs
 
 
 # TODO add support for gerrit user and password (check if ever useful)
-def gather_changes(args, oldest_timestamp):
-    if args.json_input:
-        log.info('Reading changes data from %s', args.json_input)
-        with open(args.json_input, 'r') as f:
-            json_data = f.read()
-        try:
-            changes = json.loads(json_data)
-            log.info('Loaded %d total changes', len(changes))
-            return changes
-        except ValueError:
-            log.critical('%s is not well-formed json', args.json_input)
-            exit(1)
+def gather_gerrit_changes(args, oldest_timestamp, projects):
+    projects_gerrit = [x['name'] for x in projects.get('gerrit', dict())]
 
-    log.info('Gathering changes data from %s', args.gerrit_url)
+    if len(projects_gerrit) < 1:
+        return 0, dict()
+
+    log.info('Gathering gerrit changes from %s for %s', args.gerrit_url,
+             ', '.join(sorted(projects_gerrit)))
     start = 0
     count = args.gerrit_query_size
     results = [{'_more_changes': True}]
@@ -284,20 +367,27 @@ def gather_changes(args, oldest_timestamp):
     while '_more_changes' in results[-1].keys() and \
             results[-1]['_more_changes']:
         log.debug('Querying %d changes starting at %d', count, start)
-        query = ('%s/changes/?q=status:open+OR+status:closed&'
-                 'o=ALL_REVISIONS&o=MESSAGES&start=%d&n=%d'
-                 % (args.gerrit_url, start, count))
-        log.debug(query)
-        response = requests.get(query, verify=args.verify_https_requests)
+        payload = {'q': 'status:open OR status:closed',
+                   'o': ['ALL_REVISIONS', 'MESSAGES'],
+                   'start': start,
+                   'n': count}
+        query = ('%s/changes/' % args.gerrit_url)
+        response = requests.get(query, params=payload,
+                                verify=args.verify_https_requests)
+        log.debug(response.url)
         # strip magic junk off the start of the gerrit response
         results = json.loads(response.text[5:])
-        # log.debug(json.dumps(results, sort_keys=True, indent=4,
-        #                     separators=(',', ': ')))
+        log.debug(json.dumps(results, sort_keys=True, indent=4,
+                             separators=(',', ': ')))
         for change in results:
-            # log.debug(json.dumps(change, sort_keys=True, indent=4,
-            #                      separators=(',', ': ')))
-            # log.debug('%d changes (start: %d, count=%d)', len(results),
-            #           start, count)
+            log.debug(json.dumps(change, sort_keys=True, indent=4,
+                                 separators=(',', ': ')))
+            log.debug('%d changes (start: %d, count=%d)', len(results),
+                      start, count)
+            if change['project'] not in projects_gerrit:
+                log.debug('Skipping %s as %s not in projects of interest',
+                          change['id'], change['project'])
+                continue
             if change['id'] in changes:
                 log.debug(json.dumps(change,
                                      sort_keys=True,
@@ -324,31 +414,11 @@ def gather_changes(args, oldest_timestamp):
                 results[-1].pop('_more_changes', None)
                 break
         start += count
-    log.info('Gathered %d total changes', len(changes))
-    return changes
 
+    total_changes = len(changes)
+    log.info('Gathered %d total changes', total_changes)
 
-# TODO add support for gerrit user and password (check if ever useful)
-def gather_projects(args):
-    log.info('Gathering projects data from %s', args.gerrit_url)
-    projects = dict()
-    query = ('%s/projects/?d' % args.gerrit_url)
-    log.debug(query)
-    response = requests.get(query, verify=args.verify_https_requests)
-    # strip magic junk off the start of the gerrit response
-    results = json.loads(response.text[5:])
-    # log.debug(json.dumps(results, sort_keys=True, indent=4,
-    #                     separators=(',', ': ')))
-    for project in results:
-        if project.startswith('All-'):
-            continue
-        projects[project] = dict()
-        projects[project]['desc'] = results[project].get('description',
-                                                         'no description')
-    log.debug(projects)
-
-    log.info('Gathered %d total projects', len(projects))
-    return projects
+    return total_changes, get_changes_by_project(changes)
 
 
 def get_changes_by_project(changes):
@@ -363,15 +433,35 @@ def get_changes_by_project(changes):
     return changes_by_project
 
 
-def parse_gerrit_change_message(msg):
+def parse_ci_job_comments(msg):
     """
     Parse gerrit change messages that look like CI job messages,
     extracting CI job data and returning as a dict
     """
-
-    # TODO refactor to take a list of patterns for runs and jobs (ultimately
-    # taken from a config parameter/file)
     ci_run_patt = 'Patch Set (?P<num>\d+): Verified(?P<v_score>\S+)\s+Build (?P<status>\S+)\s+(?P<jobs>.+)'  # noqa
+
+    return __parse_change_messages(msg['message'], ci_run_patt)
+
+
+def parse_pr_message(msg):
+    """
+    Parse PR messages that look like CI job messages,
+    extracting CI job data and returning as a dict
+    """
+    ci_run_patt = 'Build (?P<status>\S+)\s+(?P<jobs>.+)'  # noqa
+
+    return __parse_change_messages(msg['body'], ci_run_patt)
+
+
+# TODO Should you do the initial matching in the caller and pass the resulting
+# matcher object and initial dict down to this method?
+def __parse_change_messages(message, ci_run_patt):
+    """
+    Parse change messages that look like CI job messages,
+    extracting CI job data and returning as a dict
+    """
+
+    # TODO refactor to take a list of patterns for runs/jobs from a file
     ci_run_re = re.compile(ci_run_patt, re.MULTILINE | re.DOTALL)
     ci_job_v1_patt = '^- (?P<proto>.+)?://(?P<jenkins_path>.+)?/job/(?P<name>\S+)/\d+/ : (?P<result>\S+) in (?P<time_h>\d+h )?(?P<time_m>\d+m )?(?P<time_s>\d+s)(?P<non_voting> \(non\-voting\))?(?P<the_rest>.*)$'  # noqa
     ci_job_v1_re = re.compile(ci_job_v1_patt, re.MULTILINE)
@@ -379,11 +469,18 @@ def parse_gerrit_change_message(msg):
     ci_job_v2_re = re.compile(ci_job_v2_patt, re.MULTILINE)
 
     run = dict()
-    ci_run_match = ci_run_re.match(msg['message'])
+    ci_run_match = ci_run_re.match(message)
     if ci_run_match:
-        run['date'] = msg['date']
-        run['num'] = ci_run_match.group('num')
-        run['v_score'] = ci_run_match.group('v_score')
+        try:
+            run['num'] = ci_run_match.group('num')
+        except IndexError as e:
+            run['num'] = None
+
+        try:
+            run['v_score'] = ci_run_match.group('v_score')
+        except IndexError as e:
+            run['v_score'] = None
+
         run['status'] = ci_run_match.group('status')
 
         run['jobs'] = list()
@@ -418,7 +515,7 @@ def parse_gerrit_change_message(msg):
     return run
 
 
-def parse_change_stats(changes, start_dt):
+def parse_change_stats(args, changes, start_dt, ts_format, change_parser):
     """
     Returns a pandas DataFrame with
         a count of changes created
@@ -437,75 +534,10 @@ def parse_change_stats(changes, start_dt):
     recheck = defaultdict(int)
     reverify = defaultdict(int)
 
-    for gerrit_id in changes:
-        change = changes[gerrit_id]
-        created_ts = change['created']
-        created_dt = datetime.strptime(created_ts[:-3], GERRIT_TIMESTAMP)
-        updated_ts = change['updated']
-        updated_dt = datetime.strptime(updated_ts[:-3], GERRIT_TIMESTAMP)
-        if created_dt >= start_dt:
-            created[created_ts] += 1
-            log.debug(
-                'created updated to %d with project|change: '
-                '%s|%s',
-                created[created_ts],
-                change['project'],
-                gerrit_id)
-        if updated_dt >= start_dt:
-            updated[updated_ts] += 1
-            log.debug(
-                'updated updated to %d with project|change: '
-                '%s|%s',
-                updated[updated_ts],
-                change['project'],
-                gerrit_id)
-
-        if change['status'] == 'MERGED':
-            log.debug(json.dumps(change,
-                                 sort_keys=True,
-                                 indent=4,
-                                 separators=(',', ': ')))
-            merged_ts = get_merged_timestamp(change)
-            merged_dt = datetime.strptime(merged_ts[:-3], GERRIT_TIMESTAMP)
-            if merged_dt >= start_dt:
-                merged[merged_ts] += 1
-                log.debug(
-                    'merged updated to %d with project|change: '
-                    '%s|%s',
-                    merged[merged_ts],
-                    change['project'],
-                    gerrit_id)
-
-            revisions[merged_ts] = len(change['revisions'])
-
-            lifespan_sec[merged_ts] = (
-                merged_dt - created_dt).total_seconds()
-            log.debug(
-                'change lifespan set to %d for project|change: %s|%s',
-                lifespan_sec[merged_ts],
-                change['project'],
-                gerrit_id)
-
-            for message in change['messages']:
-                log.debug(message)
-                if 'recheck' in message['message'].lower():
-                    recheck[merged_ts] += 1
-                    log.debug(
-                        'recheck updated to %d with project|change|rev: '
-                        '%s|%s|%s',
-                        recheck[merged_ts],
-                        change['project'],
-                        gerrit_id,
-                        message['_revision_number'])
-                elif 'reverify' in message['message'].lower():
-                    reverify[merged_ts] += 1
-                    log.debug(
-                        'reverify updated to %d with project|change|rev: '
-                        '%s|%s|%s',
-                        reverify[merged_ts],
-                        change['project'],
-                        gerrit_id,
-                        message['_revision_number'])
+    for change_id in changes:
+        change_parser(args, change_id, changes, created, lifespan_sec, merged,
+                      recheck, reverify, revisions, start_dt, ts_format,
+                      updated)
 
     d = {'created': created,
          'updated': updated,
@@ -526,6 +558,141 @@ def parse_change_stats(changes, start_dt):
                                'reverify'])
     log.debug('activity df:\n%s', df)
     return df
+
+
+def parse_change(args, change_id, changes, created, lifespan_sec, merged, recheck,
+                 reverify, revisions, start_dt, ts_format, updated):
+    change = changes[change_id]
+    created_ts = change['created']
+    created_dt = datetime.strptime(created_ts[:-3], ts_format)
+    change['created_dt'] = created_dt
+    updated_ts = change['updated']
+    updated_dt = datetime.strptime(updated_ts[:-3], ts_format)
+    change['updated_dt'] = updated_dt
+    merged_ts = get_merged_timestamp(change)
+    merged_dt = datetime.strptime(merged_ts[:-3], ts_format)
+    change['merged_dt'] = merged_dt
+    msg_details = 'project|id: %s|%s' % (
+        change['project'], change_id)
+    if created_dt >= start_dt:
+        created[created_ts] += 1
+        log.debug('created set to %d with %s',
+                  created[created_ts],
+                  msg_details)
+    if updated_dt >= start_dt:
+        updated[updated_ts] += 1
+        log.debug('updated set to %d with %s',
+                  updated[updated_ts],
+                  msg_details)
+    if change['status'] == 'MERGED' and merged_dt >= start_dt:
+        merged[merged_ts] += 1
+        log.debug('merged set to %d with %s',
+                  merged[merged_ts],
+                  msg_details)
+        revisions[merged_ts] = len(change['revisions'])
+
+        lifespan_sec[merged_ts] = (
+            merged_dt - created_dt).total_seconds()
+        log.debug('change lifespan set to %d with %s',
+                  lifespan_sec[merged_ts],
+                  msg_details)
+
+        for message in change['messages']:
+            msg_details = 'project|change|rev: %s|%s|%s' % (
+                change['project'], change_id, message['_revision_number'])
+            if 'recheck' in message['message'].lower():
+                recheck[merged_ts] += 1
+                log.debug(
+                    'recheck updated to %d with %s',
+                    recheck[merged_ts],
+                    msg_details)
+            elif 'reverify' in message['message'].lower():
+                reverify[merged_ts] += 1
+                log.debug(
+                    'reverify updated to %d with %s',
+                    reverify[merged_ts],
+                    msg_details)
+
+
+def parse_pr(args, pr_id, prs, created, lifespan_sec, merged, recheck, reverify,
+             revisions, start_dt, ts_format, updated):
+    pr = prs[pr_id]
+    created_ts = pr['created_at']
+    created_dt = datetime.strptime(created_ts, ts_format)
+    pr['created_dt'] = created_dt
+    updated_ts = pr['updated_at']
+    updated_dt = datetime.strptime(updated_ts, ts_format)
+    pr['updated_dt'] = updated_dt
+    merged_ts = pr['merged_at']
+    if pr['merged_at']:
+        merged_dt = datetime.strptime(merged_ts, ts_format)
+        pr['merged_dt'] = merged_dt
+    # Assume we won't have more than 250 commits on a PR for now ...
+    commits = github_query(args, pr['commits_url'])
+    log.debug('commits: %s',
+              json.dumps(commits, sort_keys=True, indent=4,
+                         separators=(',', ': ')))
+    pr['commits'] = commits
+    comments = github_query(args, pr['comments_url'])
+    log.debug('comments: %s',
+              json.dumps(comments, sort_keys=True, indent=4,
+                         separators=(',', ': ')))
+    pr['comments'] = comments
+    msg_details = 'project|pr|id: %s|%s|%s' % (
+        pr['base']['repo']['full_name'], pr['number'], pr_id)
+    if created_dt >= start_dt:
+        created[created_ts] += 1
+        log.debug('created set to %d with %s',
+                  created[created_ts],
+                  msg_details)
+    if updated_dt >= start_dt:
+        updated[updated_ts] += 1
+        log.debug('updated set to %d with %s',
+                  updated[updated_ts],
+                  msg_details)
+    if pr['merged_at'] and merged_dt >= start_dt:
+        merged[merged_ts] += 1
+        log.debug('merged set to %d with %s',
+                  merged[merged_ts],
+                  msg_details)
+
+        revisions[merged_ts] = len(commits)
+
+        lifespan_sec[merged_ts] = (
+            merged_dt - created_dt).total_seconds()
+        log.debug('pr lifespan set to %d with %s',
+                  lifespan_sec[merged_ts],
+                  msg_details)
+
+        for comment in comments:
+            msg_details = 'project|pr|id|comment: %s|%s|%s|%s' % (
+                pr['base']['repo']['full_name'], pr['number'], pr_id,
+                comment['id'])
+
+            if 'recheck' in comment['body'].lower():
+                recheck[merged_ts] += 1
+                log.debug(
+                    'recheck updated to %d with %s',
+                    recheck[merged_ts],
+                    msg_details)
+            elif 'reverify' in comment['body'].lower():
+                reverify[merged_ts] += 1
+                log.debug(
+                    'reverify updated to %d with %s',
+                    reverify[merged_ts],
+                    msg_details)
+
+
+def github_query(args, query_url):
+    if args.github_user and args.github_token:
+        response = requests.get(query_url,
+                                verify=args.verify_https_requests,
+                                auth=(args.github_user, args.github_token))
+    else:
+        response = requests.get(query_url,
+                                verify=args.verify_https_requests)
+    log.debug('github query url: %s', response.url)
+    return response.json()
 
 
 def get_merged_timestamp(change):
@@ -560,11 +727,11 @@ def parse_ci_stats(changes, start_dt):
         log.debug(change)
         for message in change['messages']:
             log.debug('message: %s', message)
-            ci_run = parse_gerrit_change_message(message)
+            ci_run = parse_ci_job_comments(message)
             log.debug('ci_run: %s', ci_run)
             if ci_run:
                 log.debug(ci_run)
-                ci_run_ts = ci_run['date']
+                ci_run_ts = message['date']
                 ci_run_dt = datetime.strptime(ci_run_ts[:-3], GERRIT_TIMESTAMP)
 
                 # ignore messages on changes that are older than our start time
@@ -579,24 +746,26 @@ def parse_ci_stats(changes, start_dt):
                     continue
 
                 updated_ts = change['updated']
-                if ci_run['status'] in ('succeeded', 'Successful', 'OK'):
+
+                status = re.sub(r'\W+', '', ci_run['status'].lower())
+                if status in CI_SUCCESS_STATUSES:
                     ci_success[updated_ts] += 1
-                    log.debug(debug_msg('ci_success',
-                                        ci_success[updated_ts],
-                                        'run',
-                                        change,
-                                        message,
-                                        ci_run['num'],
-                                        'status: ' + ci_run['status']))
-                elif ci_run['status'] in ('failed', 'Failed'):
+                    log.debug(debug_msg_gerrit('ci_success',
+                                               ci_success[updated_ts],
+                                               'run',
+                                               change,
+                                               message,
+                                               ci_run['num'],
+                                               'status: ' + ci_run['status']))
+                elif status in CI_FAILURE_STATUSES:
                     ci_failure[updated_ts] += 1
-                    log.debug(debug_msg('ci_failure',
-                                        ci_failure[updated_ts],
-                                        'run',
-                                        change,
-                                        message,
-                                        ci_run['num'],
-                                        'status: ' + ci_run['status']))
+                    log.debug(debug_msg_gerrit('ci_failure',
+                                               ci_failure[updated_ts],
+                                               'run',
+                                               change,
+                                               message,
+                                               ci_run['num'],
+                                               'status: ' + ci_run['status']))
                 else:
                     # TODO add extra status to appropriate path above
                     log.warn('Unexpected status %s for %s on %s, skipping',
@@ -608,11 +777,117 @@ def parse_ci_stats(changes, start_dt):
                     for ci_job in ci_run['jobs']:
                         ci_total_time_sec[merged_ts] += ci_job[
                             'total_sec']
-                        log.debug(debug_msg('ci_total_time_sec',
+                        log.debug(debug_msg_gerrit('ci_total_time_sec',
+                                                   ci_total_time_sec[merged_ts],
+                                                   'job',
+                                                   change,
+                                                   message,
+                                                   ci_job['name'],
+                                                   str(ci_job[
+                                                           'total_sec']) + 's'))
+
+                        # this could end up being the longest job across
+                        # multiple changes if two changes merge at the same
+                        # time (to the microsecond), so not going to worry
+                        # about that for now but log what we're doing so
+                        # someone can debug this in future
+                        if (ci_job['total_sec'] >
+                                ci_longest_time_sec[merged_ts]):
+                            ci_longest_time_sec[merged_ts] = ci_job[
+                                'total_sec']
+                            log.debug(debug_msg_gerrit('ci_longest_time_sec',
+                                                       ci_longest_time_sec[
+                                                           merged_ts],
+                                                       'job',
+                                                       change,
+                                                       message,
+                                                       ci_job['name'],
+                                                       str(ci_job[
+                                                               'total_sec']) + 's'))
+
+    d = {'ci_total_time_sec': ci_total_time_sec,
+         'ci_longest_time_sec': ci_longest_time_sec,
+         'ci_success': ci_success,
+         'ci_failure': ci_failure}
+
+    df = pd.DataFrame(d, columns=['ci_total_time_sec', 'ci_longest_time_sec',
+                                  'ci_success', 'ci_failure'])
+    log.debug('ci time status df:\n%s', df)
+    return df
+
+
+def parse_pr_ci_stats(prs, start_dt):
+    """
+    Returns a pandas DataFrame with
+        sum of the ci time for all ci jobs for each merged pr
+        the time for the longest job for each merged pr
+        success and failure counts for each ci run of each updated pr
+    from the list of prs passed
+    """
+    ci_total_time_sec = defaultdict(int)
+    ci_longest_time_sec = defaultdict(int)
+    ci_success = defaultdict(int)
+    ci_failure = defaultdict(int)
+    for pr_id in prs:
+        pr = prs[pr_id]
+        log.debug("pr %d", pr_id)
+        for comment in pr['comments']:
+            log.debug('comment: %s', comment)
+            ci_run = parse_pr_message(comment)
+            log.debug('ci_run: %s', ci_run)
+            if ci_run:
+                log.debug(ci_run)
+                ci_run_ts = comment['created_at']
+                ci_run_dt = datetime.strptime(ci_run_ts, GITHUB_TIMESTAMP)
+
+                msg_details = 'project|pr|id|comment: %s|%s|%s|%s' % (
+                    pr['base']['repo']['full_name'], pr['number'], pr_id,
+                    comment['id'])
+
+                # ignore messages on changes that are older than our start time
+                if ci_run_dt < start_dt:
+                    log.debug('discarding comment on %s with date %s',
+                              msg_details, ci_run_ts)
+                    continue
+
+                updated_ts = pr['updated_at']
+
+                status = re.sub(r'\W+', '', ci_run['status'].lower())
+                if status in CI_SUCCESS_STATUSES:
+                    ci_success[updated_ts] += 1
+                    log.debug(debug_msg_github('ci_success',
+                                        ci_success[updated_ts],
+                                        'run',
+                                        pr,
+                                        comment,
+                                        None,
+                                        'status: ' + ci_run['status']))
+                elif status in CI_FAILURE_STATUSES:
+                    ci_failure[updated_ts] += 1
+                    log.debug(debug_msg_github('ci_failure',
+                                        ci_failure[updated_ts],
+                                        'run',
+                                        pr,
+                                        comment,
+                                        None,
+                                        'status: ' + ci_run['status']))
+                else:
+                    # TODO add extra status to appropriate path above
+                    log.warn('Unexpected status %s for %s on %s, skipping',
+                             ci_run['status'], pr['number'],
+                             pr['base']['repo']['full_name'])
+                    continue
+
+                if pr['merged_at']:
+                    merged_ts = pr['merged_at']
+                    for ci_job in ci_run['jobs']:
+                        ci_total_time_sec[merged_ts] += ci_job[
+                            'total_sec']
+                        log.debug(debug_msg_github('ci_total_time_sec',
                                             ci_total_time_sec[merged_ts],
                                             'job',
-                                            change,
-                                            message,
+                                            pr,
+                                            comment,
                                             ci_job['name'],
                                             str(ci_job['total_sec']) + 's'))
 
@@ -625,12 +900,12 @@ def parse_ci_stats(changes, start_dt):
                                 ci_longest_time_sec[merged_ts]):
                             ci_longest_time_sec[merged_ts] = ci_job[
                                 'total_sec']
-                            log.debug(debug_msg('ci_longest_time_sec',
+                            log.debug(debug_msg_github('ci_longest_time_sec',
                                                 ci_longest_time_sec[
                                                     merged_ts],
                                                 'job',
-                                                change,
-                                                message,
+                                                pr,
+                                                comment,
                                                 ci_job['name'],
                                                 str(ci_job[
                                                         'total_sec']) + 's'))
@@ -646,36 +921,32 @@ def parse_ci_stats(changes, start_dt):
     return df
 
 
-# Looks klunky but the debug message is very useful for verification
-def debug_msg(field, counter, job_or_run, change, message, ci_name, ci_val):
+def debug_msg_gerrit(field, counter, job_or_run, change, message,
+                     ci_name, ci_val):
+    return debug_msg(field, counter, job_or_run, change['project'],
+                     change['change_id'], message['_revision_number'], ci_name,
+                     ci_val)
+
+
+def debug_msg_github(field, counter, job_or_run, pr, comment,
+                     ci_name, ci_val):
+    return debug_msg(field, counter, job_or_run,
+                     pr['base']['repo']['full_name'], pr['id'], comment['id'],
+                     ci_name, ci_val)
+
+
+def debug_msg(field, counter, job_or_run, project_name, change_id, message_id,
+              ci_name, ci_val):
     msg = '%s updated to %d with proj|change|rev|%s: %s|%s|%s|%s and %s' % (
         field,
         counter,
         job_or_run,
-        change['project'],
-        change['change_id'],
-        message['_revision_number'],
+        project_name,
+        change_id,
+        message_id,
         ci_name,
         ci_val)
     return msg
-
-
-def generate_dataframes(changes, start_dt):
-    """
-    Create pandas dataframes for data of interest for subsequent analysis
-    by different time periods. Some data is only recorded for merged changes
-    as rolling updates of those changing stats are not useful in the authors
-    opinion.
-    """
-    df_change_stats = parse_change_stats(changes, start_dt)
-    df_ci_stats = parse_ci_stats(changes, start_dt)
-
-    df = pd.concat([df_change_stats, df_ci_stats])
-    df.index = pd.to_datetime(df.index)
-    df.sort_index(inplace=True)
-    df.fillna(value=0, inplace=True)
-
-    return df
 
 
 def generate_html(args, df, num_changes, start_dt, finish_dt,
@@ -693,7 +964,6 @@ def generate_html(args, df, num_changes, start_dt, finish_dt,
         projects_to_report = list(set(projects).intersection(df))
     else:
         projects_to_report = projects
-    log.debug('projects to report: %s', ', '.join(projects_to_report))
 
     for project in projects_to_report:
         log.debug('%s df:\n%s', project, df[project])
@@ -907,7 +1177,7 @@ def plot_changes(df_plot, group):
         name='Merged',
         x=df_plot.index,
         y=df_plot['merged'])
-    plot_title = "Changes (%s projects)" % group
+    plot_title = "Changes/PRs (%s projects)" % group
     changes_plot = plotly.offline.plot(
         {
             "data": [created_line, submitted_line],
@@ -970,12 +1240,11 @@ def configure_logging(args):
     logging.getLogger().setLevel(logging.DEBUG)
 
     ch = logging.StreamHandler(stream=sys.stderr)
+    ch.setLevel(logging.INFO)
     if args.log_quietly:
         ch.setLevel(logging.ERROR)
     elif args.log_verbosely:
         ch.setLevel(logging.DEBUG)
-    else:
-        ch.setLevel(logging.INFO)
 
     ch_format = logging.Formatter('%(message)s')
     ch.setFormatter(ch_format)
@@ -983,10 +1252,10 @@ def configure_logging(args):
 
     if not args.no_logfile:
         fh = logging.FileHandler(args.logfile, delay=True)
-        if args.log_verbosely:
-            fh.setLevel(logging.DEBUG)
-        else:
-            fh.setLevel(logging.INFO)
+        fh.setLevel(logging.DEBUG)
+        # TODO, add custom trace level for json dumps
+        # if args.log_trace:
+        #     fh.setLevel(TRACE_LOGGING_LEVEL)
         log_format = (
             '%(asctime)s: %(process)d:%(thread)d %(levelname)s - %(message)s'
         )
