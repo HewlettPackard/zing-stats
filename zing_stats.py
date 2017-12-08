@@ -433,65 +433,28 @@ def parse_ci_job_comments(msg):
     Parse gerrit change messages that look like CI job messages,
     extracting CI job data and returning as a dict
     """
-
-    # TODO refactor to take a list of patterns for runs and jobs (ultimately
-    # taken from a config parameter/file)
     ci_run_patt = 'Patch Set (?P<num>\d+): Verified(?P<v_score>\S+)\s+Build (?P<status>\S+)\s+(?P<jobs>.+)'  # noqa
-    ci_run_re = re.compile(ci_run_patt, re.MULTILINE | re.DOTALL)
-    ci_job_v1_patt = '^- (?P<proto>.+)?://(?P<jenkins_path>.+)?/job/(?P<name>\S+)/\d+/ : (?P<result>\S+) in (?P<time_h>\d+h )?(?P<time_m>\d+m )?(?P<time_s>\d+s)(?P<non_voting> \(non\-voting\))?(?P<the_rest>.*)$'  # noqa
-    ci_job_v1_re = re.compile(ci_job_v1_patt, re.MULTILINE)
-    ci_job_v2_patt = '^- (?P<proto>.+)?://(?P<logs_path>.+)?/(?P<name>\D+) : (?P<result>\S+) in (?P<time_h>\d+h )?(?P<time_m>\d+m )?(?P<time_s>\d+s)(?P<non_voting> \(non\-voting\))?(?P<the_rest>.*)$'  # noqa
-    ci_job_v2_re = re.compile(ci_job_v2_patt, re.MULTILINE)
 
-    run = dict()
-    ci_run_match = ci_run_re.match(msg['message'])
-    if ci_run_match:
-        #run['date'] = msg['date']
-        run['num'] = ci_run_match.group('num')
-        run['v_score'] = ci_run_match.group('v_score')
-        run['status'] = ci_run_match.group('status')
-
-        run['jobs'] = list()
-        for ci_job_match in itertools.chain(
-                ci_job_v1_re.finditer(ci_run_match.group('jobs')),
-                ci_job_v2_re.finditer(ci_run_match.group('jobs'))):
-            job = dict()
-            job['name'] = ci_job_match.group('name')
-            job['result'] = ci_job_match.group('result')
-
-            # mash time fields together into total seconds for job
-            job['total_sec'] = 0
-            ci_job_time_h = ci_job_match.group('time_h')
-            ci_job_time_m = ci_job_match.group('time_m')
-            ci_job_time_s = ci_job_match.group('time_s')
-
-            if ci_job_time_h:
-                job['total_sec'] += \
-                    int(str(ci_job_time_h).strip().rstrip('h')) * 3600
-            if ci_job_time_m:
-                job['total_sec'] += \
-                    int(str(ci_job_time_m).strip().rstrip('m')) * 60
-            if ci_job_time_s:
-                job['total_sec'] += \
-                    int(str(ci_job_time_s).strip().rstrip('s'))
-
-            job['non_voting'] = ci_job_match.group('non_voting')
-            if len(ci_job_match.group('the_rest')) > 0:
-                raise Exception('unexpected content in job: %s'
-                                % ci_job_match.group('the_rest'))
-            run['jobs'].append(job)
-    return run
+    return parse_change_messages(msg['message'], ci_run_patt)
 
 
 def parse_pr_message(msg):
     """
-    Parse gerrit change messages that look like CI job messages,
+    Parse PR messages that look like CI job messages,
+    extracting CI job data and returning as a dict
+    """
+    ci_run_patt = 'Build (?P<status>\S+)\s+(?P<jobs>.+)'  # noqa
+
+    return parse_change_messages(msg['body'], ci_run_patt)
+
+
+def parse_change_messages(message, ci_run_patt):
+    """
+    Parse change messages that look like CI job messages,
     extracting CI job data and returning as a dict
     """
 
-    # TODO refactor to take a list of patterns for runs and jobs (ultimately
-    # taken from a config parameter/file)
-    ci_run_patt = 'Build (?P<status>\S+)\s+(?P<jobs>.+)'  # noqa
+    # TODO refactor to take a list of patterns for runs/jobs from a file
     ci_run_re = re.compile(ci_run_patt, re.MULTILINE | re.DOTALL)
     ci_job_v1_patt = '^- (?P<proto>.+)?://(?P<jenkins_path>.+)?/job/(?P<name>\S+)/\d+/ : (?P<result>\S+) in (?P<time_h>\d+h )?(?P<time_m>\d+m )?(?P<time_s>\d+s)(?P<non_voting> \(non\-voting\))?(?P<the_rest>.*)$'  # noqa
     ci_job_v1_re = re.compile(ci_job_v1_patt, re.MULTILINE)
@@ -499,8 +462,18 @@ def parse_pr_message(msg):
     ci_job_v2_re = re.compile(ci_job_v2_patt, re.MULTILINE)
 
     run = dict()
-    ci_run_match = ci_run_re.match(msg['body'])
+    ci_run_match = ci_run_re.match(message)
     if ci_run_match:
+        try:
+            run['num'] = ci_run_match.group('num')
+        except IndexError as e:
+            run['num'] = None
+
+        try:
+            run['v_score'] = ci_run_match.group('v_score')
+        except IndexError as e:
+            run['v_score'] = None
+
         run['status'] = ci_run_match.group('status')
 
         run['jobs'] = list()
