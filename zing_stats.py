@@ -316,6 +316,8 @@ def gather_github_prs(args, oldest_timestamp, projects):
                 prs.pop(project)
                 break
             results = response.json()
+            # TODO use functools and helper function to have log.debug() only
+            # resolve the json.dumps() if needed (all usages of this pattern)
             log.debug(json.dumps(results, sort_keys=True, indent=4,
                                  separators=(',', ': ')))
             for pr in results:
@@ -438,7 +440,7 @@ def parse_ci_job_comments(msg):
     """
     ci_run_patt = 'Patch Set (?P<num>\d+): Verified(?P<v_score>\S+)\s+Build (?P<status>\S+)\s+(?P<jobs>.+)'  # noqa
 
-    return parse_change_messages(msg['message'], ci_run_patt)
+    return __parse_change_messages(msg['message'], ci_run_patt)
 
 
 def parse_pr_message(msg):
@@ -448,10 +450,12 @@ def parse_pr_message(msg):
     """
     ci_run_patt = 'Build (?P<status>\S+)\s+(?P<jobs>.+)'  # noqa
 
-    return parse_change_messages(msg['body'], ci_run_patt)
+    return __parse_change_messages(msg['body'], ci_run_patt)
 
 
-def parse_change_messages(message, ci_run_patt):
+# TODO Should you do the initial matching in the caller and pass the resulting
+# matcher object and initial dict down to this method?
+def __parse_change_messages(message, ci_run_patt):
     """
     Parse change messages that look like CI job messages,
     extracting CI job data and returning as a dict
