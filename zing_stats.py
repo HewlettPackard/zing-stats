@@ -285,6 +285,7 @@ def gather_github_prs(args, oldest_timestamp, projects):
              ', '.join(sorted(projects_github)))
     total_prs = 0
     prs = dict()
+    session = requests.Session()
     for project in projects_github:
         prs[project] = dict()
 
@@ -296,13 +297,13 @@ def gather_github_prs(args, oldest_timestamp, projects):
                  % (args.github_url, project))
         while next_page:
             if args.github_user and args.github_token:
-                response = requests.get(
+                response = session.get(
                     query, params=payload,
                     verify=args.verify_https_requests,
                     auth=(args.github_user, args.github_token))
             else:
-                response = requests.get(query, params=payload,
-                                        verify=args.verify_https_requests)
+                response = session.get(query, params=payload,
+                                       verify=args.verify_https_requests)
             log.debug(response.url)
             if response.status_code == 404:
                 if args.github_user and args.github_token:
@@ -364,6 +365,7 @@ def gather_gerrit_changes(args, oldest_timestamp, projects):
     count = args.gerrit_query_size
     results = [{'_more_changes': True}]
     changes = dict()
+    session = requests.Session()
     while '_more_changes' in results[-1].keys() and \
             results[-1]['_more_changes']:
         log.debug('Querying %d changes starting at %d', count, start)
@@ -372,8 +374,8 @@ def gather_gerrit_changes(args, oldest_timestamp, projects):
                    'start': start,
                    'n': count}
         query = ('%s/changes/' % args.gerrit_url)
-        response = requests.get(query, params=payload,
-                                verify=args.verify_https_requests)
+        response = session.get(query, params=payload,
+                               verify=args.verify_https_requests)
         log.debug(response.url)
         # strip magic junk off the start of the gerrit response
         results = json.loads(response.text[5:])
@@ -535,9 +537,10 @@ def parse_change_stats(args, changes, start_dt, ts_format, change_parser):
     reverify = defaultdict(int)
 
     for change_id in changes:
+        session = requests.Session()
         change_parser(args, change_id, changes, created, lifespan_sec, merged,
                       recheck, reverify, revisions, start_dt, ts_format,
-                      updated)
+                      updated, session)
 
     d = {'created': created,
          'updated': updated,
@@ -561,7 +564,7 @@ def parse_change_stats(args, changes, start_dt, ts_format, change_parser):
 
 
 def parse_change(args, change_id, changes, created, lifespan_sec, merged, recheck,
-                 reverify, revisions, start_dt, ts_format, updated):
+                 reverify, revisions, start_dt, ts_format, updated, session):
     change = changes[change_id]
     created_ts = change['created']
     created_dt = datetime.strptime(created_ts[:-3], ts_format)
@@ -615,7 +618,7 @@ def parse_change(args, change_id, changes, created, lifespan_sec, merged, rechec
 
 
 def parse_pr(args, pr_id, prs, created, lifespan_sec, merged, recheck, reverify,
-             revisions, start_dt, ts_format, updated):
+             revisions, start_dt, ts_format, updated, session):
     pr = prs[pr_id]
     created_ts = pr['created_at']
     created_dt = datetime.strptime(created_ts, ts_format)
@@ -628,12 +631,12 @@ def parse_pr(args, pr_id, prs, created, lifespan_sec, merged, recheck, reverify,
         merged_dt = datetime.strptime(merged_ts, ts_format)
         pr['merged_dt'] = merged_dt
     # Assume we won't have more than 250 commits on a PR for now ...
-    commits = github_query(args, pr['commits_url'])
+    commits = github_query(args, pr['commits_url'], session)
     log.debug('commits: %s',
               json.dumps(commits, sort_keys=True, indent=4,
                          separators=(',', ': ')))
     pr['commits'] = commits
-    comments = github_query(args, pr['comments_url'])
+    comments = github_query(args, pr['comments_url'], session)
     log.debug('comments: %s',
               json.dumps(comments, sort_keys=True, indent=4,
                          separators=(',', ': ')))
@@ -683,13 +686,13 @@ def parse_pr(args, pr_id, prs, created, lifespan_sec, merged, recheck, reverify,
                     msg_details)
 
 
-def github_query(args, query_url):
+def github_query(args, query_url, session):
     if args.github_user and args.github_token:
-        response = requests.get(query_url,
+        response = session.get(query_url,
                                 verify=args.verify_https_requests,
                                 auth=(args.github_user, args.github_token))
     else:
-        response = requests.get(query_url,
+        response = session.get(query_url,
                                 verify=args.verify_https_requests)
     log.debug('github query url: %s', response.url)
     return response.json()
