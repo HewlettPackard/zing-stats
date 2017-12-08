@@ -47,6 +47,9 @@ import re
 import requests
 import sys
 
+CI_FAILURE_STATUSES = ['failed']
+CI_SUCCESS_STATUSES = ['succeeded', 'successful', 'ok']
+
 # need to drop last few digits to make microseconds from nanoseconds
 # e.g. datetime.strptime(change['created'][:-3], GERRIT_TIMESTAMP)
 GERRIT_TIMESTAMP = '%Y-%m-%d %H:%M:%S.%f'
@@ -741,7 +744,7 @@ def parse_ci_stats(changes, start_dt):
                 updated_ts = change['updated']
 
                 status = re.sub(r'\W+', '', ci_run['status'].lower())
-                if status in ('succeeded', 'successful', 'ok'):
+                if status in CI_SUCCESS_STATUSES:
                     ci_success[updated_ts] += 1
                     log.debug(debug_msg_gerrit('ci_success',
                                                ci_success[updated_ts],
@@ -750,7 +753,7 @@ def parse_ci_stats(changes, start_dt):
                                                message,
                                                ci_run['num'],
                                                'status: ' + ci_run['status']))
-                elif status in ('failed'):
+                elif status in CI_FAILURE_STATUSES:
                     ci_failure[updated_ts] += 1
                     log.debug(debug_msg_gerrit('ci_failure',
                                                ci_failure[updated_ts],
@@ -846,7 +849,7 @@ def parse_pr_ci_stats(prs, start_dt):
                 updated_ts = pr['updated_at']
 
                 status = re.sub(r'\W+', '', ci_run['status'].lower())
-                if status in ('succeeded', 'successful', 'ok'):
+                if status in CI_SUCCESS_STATUSES:
                     ci_success[updated_ts] += 1
                     log.debug(debug_msg_github('ci_success',
                                         ci_success[updated_ts],
@@ -855,7 +858,7 @@ def parse_pr_ci_stats(prs, start_dt):
                                         comment,
                                         None,
                                         'status: ' + ci_run['status']))
-                elif status in ('failed'):
+                elif status in CI_FAILURE_STATUSES:
                     ci_failure[updated_ts] += 1
                     log.debug(debug_msg_github('ci_failure',
                                         ci_failure[updated_ts],
