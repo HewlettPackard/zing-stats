@@ -32,7 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # install zing-stats from git repo
 COPY zing_stats.py /usr/local/bin/zing_stats.py
-COPY projects_teams.json /usr/local/bin/projects_teams.json
+COPY projects_teams.json /usr/local/bin/projects.json
 COPY zing_stats.html.j2 /usr/local/bin/zing_stats.html.j2
 COPY requirements.txt /
 RUN pip install --no-cache-dir -r /requirements.txt
