@@ -14,6 +14,9 @@ Terminology:
 - Each time CI is triggered on a change, a CI run occurs
 - A CI run consists of one or more CI jobs e.g. foo-copyright, foo-check and so on
 
+For now, zing-stats expects job comments in the format printed by OpenStack Zuul. This needs to be more customisable in future. For now, if your
+CI system uses a different format, you'll need to modify the hardcoded regexs.
+
 ## Screenshots
 
 Example output with projects tab (--project-map specified)
@@ -39,16 +42,25 @@ Example output of detailed stats section
 
 ## Running
 
-### Running from docker hub
-docker run zingstats/zing-stats
-
 ### Running as script
 
 ```
-./zing_stats.py --gerrit-host <gerrit url> -o <output directory>
+./zing_stats.py --gerrit-host <gerrit url> --github-host <github enterprise url> --github-user <github user> --github-token <github token> -o <output directory>
+
+The team names used in zing-stats reports are read from projects.json
+
+### Running from docker hub
+(assumes projects.json is in your pwd, adjust the -v as neccesary if not)
+
+```
+docker run -v $(pwd)/projects.json:/usr/local/bin/projects.json -e gerrit_host=<gerrit url> -e github_host=<github enterprise url> -e github_user=<github user> -e github_token=<github token> zingstats/zing-stats
 ```
 
-The team names used in zing-stats reports are read from projects_teams.json
+e.g.
+
+```
+docker run -v $(pwd)/projects.json:/usr/local/bin/projects.json -e gerrit_host=https://review.openstack.org/ -e github_host=https://github.com/ zingstats/zing-stats
+```
 
 ### Running in docker compose
 
