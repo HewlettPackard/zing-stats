@@ -45,7 +45,7 @@ Example output of detailed stats section
 ### Running as script
 
 ```
-./zing_stats.py --gerrit-host <gerrit url> --github-host <github enterprise url> --github-user <github user> --github-token <github token> -o <output directory>
+./zing_stats.py --gerrit-url <gerrit url> --github-url <github enterprise url> --github-user <github user> --github-token <github token> -o <output directory>
 
 The team names used in zing-stats reports are read from projects.json
 
@@ -53,13 +53,13 @@ The team names used in zing-stats reports are read from projects.json
 (assumes projects.json is in your pwd, adjust the -v as neccesary if not)
 
 ```
-docker run -v $(pwd)/projects.json:/usr/local/bin/projects.json -e gerrit_host=<gerrit url> -e github_host=<github enterprise url> -e github_user=<github user> -e github_token=<github token> zingstats/zing-stats
+docker run -v $(pwd)/projects.json:/projects.json -e GERRIT_URL=<gerrit url> -e GITHUB_URL=<github enterprise url> -e GITHUB_USER=<github user> -e GITHUB_TOKEN=<github token> zingstats/zing-stats
 ```
 
 e.g.
 
 ```
-docker run -v $(pwd)/projects.json:/usr/local/bin/projects.json -e gerrit_host=https://review.openstack.org/ -e github_host=https://github.com/ zingstats/zing-stats
+docker run -v $(pwd)/projects.json:/projects.json -e gerrit_host=https://review.openstack.org/ -e github_host=https://github.com/ zingstats/zing-stats
 ```
 
 ### Running in docker compose
@@ -71,16 +71,24 @@ reporting.
     ```
     docker-compose build --force-rm --no-cache
     ```
-2. Run the environment (detached)
+2. Create a docker-compose environment file (zing_stats.env) with your zing-stats arguments e.g.
+    ```
+    GERRIT_URL=https://gerrit.example.net
+    GITHUB_URL=https://github.example.net
+    GITHUB_USER=my_username
+    GITHUB_TOKEN=345sdfe
+    ZING_PROJECTS=/var/tmp/projects.json
+    ```
+3. Run the environment (detached)
     ```
     docker-compose up -d
     ```
-3. attach to running container
+4. attach to running container
     ```
     docker-compose exec zing-stats /bin/bash
     docker-compose exec zing-stats-web /bin/ash
     ```
-4. zing-stats output at http://localhost:8172/last_7d/ (may take up to 5 min)
+5. zing-stats output at http://localhost:8172/last_7d/ (may take up to 5 min)
 
 
 ## Testing

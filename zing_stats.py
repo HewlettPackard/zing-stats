@@ -84,22 +84,32 @@ def main():
     parser.set_defaults(
         script_dir=os.path.abspath((os.path.dirname(script_name)))
     )
-    parser.add_argument('--gerrit-host', dest='gerrit_url',
-                        default='https://gerrit.example.net',
-                        help='Gerrit host (def: %(default)s).')
+    parser.add_argument('--gerrit-url', dest='gerrit_url',
+                        default=os.getenv('GERRIT_URL',
+                                          'https://gerrit.example.net'),
+                        help='URL to Gerrit server ('
+                             'defaults to GERRIT_URL if set: %(default)s).')
     parser.add_argument('--gerrit-user', dest='gerrit_user',
-                        default=os.environ['LOGNAME'],
-                        help='Auth username (def: %(default)s).')
+                        default=os.getenv('GERRIT_USER'),
+                        help='Gerrit username ('
+                             'defaults to GERRIT_USER if set: %(default)s).')
     parser.add_argument('--gerrit-token', dest='gerrit_token',
-                        help='Auth token or password.')
-    parser.add_argument('--github-host', dest='github_url',
-                        default='https://github.example.net',
-                        help='Github host (def: %(default)s).')
+                        default=os.getenv('GERRIT_TOKEN'),
+                        help='Gerrit auth token or password ('
+                             'defaults to GERRIT_TOKEN if set: %(default)s).')
+    parser.add_argument('--github-url', dest='github_url',
+                        default=os.getenv('GITHUB_URL',
+                                          'https://github.example.net'),
+                        help='URL to GitHub Enterprise server ('
+                             'defaults to GITHUB_URL if set: %(default)s).')
     parser.add_argument('--github-user', dest='github_user',
-                        default=os.environ['LOGNAME'],
-                        help='Auth username (def: %(default)s).')
+                        default=os.getenv('GITHUB_USER'),
+                        help='GitHub Enterprise username ('
+                             'defaults to GITHUB_USER if set: %(default)s).')
     parser.add_argument('--github-token', dest='github_token',
-                        help='Auth token or password def: %(default)s).')
+                        default=os.getenv('GITHUB_TOKEN'),
+                        help='GitHub Enterprise auth token or password ('
+                             'defaults to GITHUB_TOKEN if set: %(default)s).')
     parser.add_argument('-n', '--gerrit-query-size', dest='gerrit_query_size',
                         type=int, default=100,
                         help='Changes per request (def: %(default)s).')

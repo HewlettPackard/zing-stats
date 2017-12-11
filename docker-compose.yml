@@ -20,24 +20,33 @@
 version: '3'
 
 services:
-    zing-stats-web:
-        image: nginx:stable-alpine
-        ports:
-        - '8172:80'
-        volumes:
-            - zing-stats:/usr/share/nginx/html:ro
-        restart: always
+  zing-stats-web:
+    image: nginx:stable-alpine
+    ports:
+      - '8172:80'
+    volumes:
+      - zing-stats:/usr/share/nginx/html:ro
 
-    zing-stats:
-        build:
-            context: .
-            args:
-                - http_proxy
-                - https_proxy
-                - no_proxy
-        volumes:
-            - zing-stats:/var/www/html:rw
-        restart: always
+  zing-stats:
+    build:
+      context: .
+      args:
+        - http_proxy
+        - https_proxy
+        - no_proxy
+    environment:
+      - http_proxy
+      - https_proxy
+      - no_proxy
+      - GERRIT_URL
+      - GITHUB_URL
+      - GITHUB_USER
+      - GITHUB_TOKEN
+
+    volumes:
+      - zing-stats:/var/www/html:rw
+      - ${ZING_PROJECTS}:/projects.json:ro
+    restart: always
 
 volumes:
-    zing-stats:
+  zing-stats:
