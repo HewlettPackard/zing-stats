@@ -34,11 +34,13 @@ Example output of detailed stats section
 ## Installation
 ### Using virtualenv
 
-1. ```git clone <url to zing-stats repo>```
-2. ```sudo apt install virtualenv```
-3. ```virtualenv ~/venv/zing-stats```
-4. ```. ~/venv/zing-stats/bin/activate```
-5. ```pip install -r requirements.txt```
+```
+git clone <url to zing-stats repo>
+sudo apt install virtualenv
+virtualenv ~/venv/zing-stats
+. ~/venv/zing-stats/bin/activate
+pip install -r requirements.txt
+```
 
 ## Running
 
@@ -46,6 +48,7 @@ Example output of detailed stats section
 
 ```
 ./zing_stats.py --gerrit-url <gerrit url> --github-url <github enterprise url> --github-user <github user> --github-token <github token> -o <output directory>
+```
 
 The team names used in zing-stats reports are read from projects.json
 
@@ -83,12 +86,12 @@ reporting.
     ```
     docker-compose up -d
     ```
-4. attach to running container
+4. Attach to running container
     ```
     docker-compose exec zing-stats /bin/bash
     docker-compose exec zing-stats-web /bin/ash
     ```
-5. zing-stats output at http://localhost:8172/last_7d/ (may take up to 5 min)
+5. zing-stats output at http://localhost:8172/last_7d/ (may take some time depending on number of configured projects)
 
 
 ## Testing
