@@ -56,7 +56,7 @@ The team names used in zing-stats reports are read from projects.json
 (assumes projects.json is in your pwd, adjust the -v as neccesary if not)
 
 ```
-docker run -v $(pwd)/projects.json:/projects.json -e GERRIT_URL=<gerrit url> -e GITHUB_URL=<github enterprise url> -e GITHUB_USER=<github user> -e GITHUB_TOKEN=<github token> zingstats/zing-stats
+docker run -v $(pwd)/projects.json:/projects.json -e GERRIT_URL=<gerrit url> -e GITHUB_URL=<github enterprise url> -e GITHUB_TOKEN=<github token> zingstats/zing-stats
 ```
 
 e.g.
@@ -78,7 +78,6 @@ reporting.
     ```
     GERRIT_URL=https://gerrit.example.net
     GITHUB_URL=https://github.example.net
-    GITHUB_USER=my_username
     GITHUB_TOKEN=345sdfe
     ZING_PROJECTS=/var/tmp/projects.json
     ```

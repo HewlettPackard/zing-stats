@@ -40,7 +40,6 @@ services:
       - no_proxy
       - GERRIT_URL
       - GITHUB_URL
-      - GITHUB_USER
       - GITHUB_TOKEN
 
     volumes:

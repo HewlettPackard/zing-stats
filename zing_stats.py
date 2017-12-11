@@ -102,10 +102,6 @@ def main():
                                           'https://github.example.net'),
                         help='URL to GitHub Enterprise server ('
                              'defaults to GITHUB_URL if set: %(default)s).')
-    parser.add_argument('--github-user', dest='github_user',
-                        default=os.getenv('GITHUB_USER'),
-                        help='GitHub Enterprise username ('
-                             'defaults to GITHUB_USER if set: %(default)s).')
     parser.add_argument('--github-token', dest='github_token',
                         default=os.getenv('GITHUB_TOKEN'),
                         help='GitHub Enterprise auth token or password ('
@@ -306,23 +302,23 @@ def gather_github_prs(args, oldest_timestamp, projects):
         query = ('%s/api/v3/repos/%s/pulls'
                  % (args.github_url, project))
         while next_page:
-            if args.github_user and args.github_token:
+            if args.github_token:
+                payload['access_token'] = args.github_token
                 response = session.get(
                     query, params=payload,
-                    verify=args.verify_https_requests,
-                    auth=(args.github_user, args.github_token))
+                    verify=args.verify_https_requests)
             else:
                 response = session.get(query, params=payload,
                                        verify=args.verify_https_requests)
             log.debug(response.url)
             if response.status_code == 404:
-                if args.github_user and args.github_token:
+                if args.github_token:
                     log.error('Skipping %s (404 while listing PRs, the '
-                              '--github-user and --github-token specified '
-                              'don\'t have access to this project)', project)
+                              '--github-token specified '
+                              'doesn\'t have access to this project)', project)
                 else:
                     log.error('Skipping %s (404 while listing PRs, try '
-                              'providing a --github-user and --github-token '
+                              'providing a --github-token '
                               'with access to this project)', project)
                 prs.pop(project)
                 break
@@ -697,10 +693,11 @@ def parse_pr(args, pr_id, prs, created, lifespan_sec, merged, recheck, reverify,
 
 
 def github_query(args, query_url, session):
-    if args.github_user and args.github_token:
+    if args.github_token:
+        payload = {'access_token': args.github_token}
         response = session.get(query_url,
                                 verify=args.verify_https_requests,
-                                auth=(args.github_user, args.github_token))
+                                params=payload)
     else:
         response = session.get(query_url,
                                 verify=args.verify_https_requests)
