@@ -14,6 +14,9 @@ Terminology:
 - Each time CI is triggered on a change, a CI run occurs
 - A CI run consists of one or more CI jobs e.g. foo-copyright, foo-check and so on
 
+For now, zing-stats expects job comments in the format printed by OpenStack Zuul. This needs to be more customisable in future. For now, if your
+CI system uses a different format, you'll need to modify the hardcoded regexs.
+
 ## Screenshots
 
 Example output with projects tab (--project-map specified)
@@ -39,16 +42,25 @@ Example output of detailed stats section
 
 ## Running
 
-### Running from docker hub
-docker run zingstats/zing-stats
-
 ### Running as script
 
 ```
-./zing_stats.py --gerrit-host <gerrit url> -o <output directory>
+./zing_stats.py --gerrit-url <gerrit url> --github-url <github enterprise url> --github-user <github user> --github-token <github token> -o <output directory>
+
+The team names used in zing-stats reports are read from projects.json
+
+### Running from docker hub
+(assumes projects.json is in your pwd, adjust the -v as neccesary if not)
+
+```
+docker run -v $(pwd)/projects.json:/projects.json -e GERRIT_URL=<gerrit url> -e GITHUB_URL=<github enterprise url> -e GITHUB_USER=<github user> -e GITHUB_TOKEN=<github token> zingstats/zing-stats
 ```
 
-The team names used in zing-stats reports are read from projects_teams.json
+e.g.
+
+```
+docker run -v $(pwd)/projects.json:/projects.json -e gerrit_host=https://review.openstack.org/ -e github_host=https://github.com/ zingstats/zing-stats
+```
 
 ### Running in docker compose
 
@@ -59,16 +71,24 @@ reporting.
     ```
     docker-compose build --force-rm --no-cache
     ```
-2. Run the environment (detached)
+2. Create a docker-compose environment file (zing_stats.env) with your zing-stats arguments e.g.
+    ```
+    GERRIT_URL=https://gerrit.example.net
+    GITHUB_URL=https://github.example.net
+    GITHUB_USER=my_username
+    GITHUB_TOKEN=345sdfe
+    ZING_PROJECTS=/var/tmp/projects.json
+    ```
+3. Run the environment (detached)
     ```
     docker-compose up -d
     ```
-3. attach to running container
+4. attach to running container
     ```
     docker-compose exec zing-stats /bin/bash
     docker-compose exec zing-stats-web /bin/ash
     ```
-4. zing-stats output at http://localhost:8172/last_7d/ (may take up to 5 min)
+5. zing-stats output at http://localhost:8172/last_7d/ (may take up to 5 min)
 
 
 ## Testing
