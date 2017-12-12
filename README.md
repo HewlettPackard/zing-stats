@@ -47,7 +47,7 @@ pip install -r requirements.txt
 ### Running as script
 
 ```
-./zing_stats.py --gerrit-url <gerrit url> --github-url <github enterprise url> --github-user <github user> --github-token <github token> -o <output directory>
+./zing_stats.py --gerrit-url <gerrit url> --github-url <github enterprise url> --github-token <github token> -o <output directory>
 ```
 
 The team names used in zing-stats reports are read from projects.json
