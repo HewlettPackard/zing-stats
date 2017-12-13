@@ -7,7 +7,7 @@
 
 ## Introduction
 
-Tool for generating summary stat reports and graphs from Zing data. Initially using Gerrit data, will consider adding Zuul and Jenkins data also if necessary.
+Tool for generating summary stat reports and graphs from Gerrit (https://www.gerritcodereview.com/) and GitHub Enterprise review and pull requests data.
 
 Terminology:
 - A change consists of 1 or more revisions (aka patches)
