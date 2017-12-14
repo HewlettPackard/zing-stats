@@ -7,7 +7,7 @@
 
 ## Introduction
 
-Tool for generating summary stat reports and graphs from Zing data. Initially using Gerrit data, will consider adding Zuul and Jenkins data also if necessary.
+Tool for generating summary stat reports and graphs from Gerrit (https://www.gerritcodereview.com/) and GitHub Enterprise review and pull requests data.
 
 Terminology:
 - A change consists of 1 or more revisions (aka patches)
@@ -47,7 +47,7 @@ pip install -r requirements.txt
 ### Running as script
 
 ```
-./zing_stats.py --gerrit-url <gerrit url> --github-url <github enterprise url> --github-user <github user> --github-token <github token> -o <output directory>
+./zing_stats.py --gerrit-url <gerrit url> --github-url <github enterprise url> --github-token <github token> -o <output directory>
 ```
 
 The team names used in zing-stats reports are read from projects.json
