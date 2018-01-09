@@ -347,7 +347,7 @@ def gather_github_prs(args, oldest_timestamp, projects):
             next_page = response.links.get('next', False)
             if next_page:
                 query = next_page['url']
-                payload = None
+                payload['access_token'] = None
 
         if project in prs:
             log.info('Gathered %d PRs for %s', len(prs[project]), project)
