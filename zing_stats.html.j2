@@ -4,6 +4,9 @@
         <meta charset="utf-8">
         <title>{{ title }}</title>
 
+        <!-- http://jquery.com/ -->
+        <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+
         <!-- Latest compiled and minified CSS -->
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
 
@@ -13,8 +16,23 @@
         <!-- Latest compiled and minified JavaScript -->
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 
+        <!-- http://tablesorter.com/ -->
+        <!-- https://stackoverflow.com/a/18049842 -->
+        <script src="http://cdn.rawgit.com/christianbach/tablesorter/07e0918254df3c2057d6d8e4653a0769f1881412/jquery.tablesorter.min.js"></script>
+
+	<script type="text/javascript" id="js">$(document).ready(function() {
+	// call the tablesorter plugin
+	$("table").tablesorter({
+		// define a custom text extraction function
+		// treat nan as 0 for now (TODO scrub this from df)
+		textExtraction: function(node) {
+			return node.textContent.toLowerCase().replace(/nan/,0);
+		}
+	});
+	}); </script>
         <!-- plot.ly js -->
         <script src="https://cdn.plot.ly/plotly-1.25.2.min.js"></script>
+
 
         <style>
             .cr {
@@ -100,7 +118,8 @@
             </div>
             <div class="row">
                 <div class="table-responsive">
-                    <table class="table table-striped">
+                    <table class="table table-striped tablesorter">
+                        <thead>
                         <tr>
                             <th>Project</th>
                             <th>Changes/PRs created</th>
@@ -115,6 +134,8 @@
                             <th>Recheck count (mean)</th>
                             <th>Reverify count (mean)</th>
                         </tr>
+                        </thead>
+                        <tbody>
                         <tr>
                             <th>Total</th>
                             <th>{{ '%0.0f' % df['total']['created'].sum()|float }}</th>
@@ -162,6 +183,7 @@
                                 <td>{{ '%0.1f' % df[project]['reverify'].mean()|float }}</td>
                             </tr>
                         {% endfor %}
+			</tbody>
                     </table>
 
                 </div>
@@ -181,5 +203,6 @@
                 </div>
             </div>
         </div>
+
     </body>
 </html>
