@@ -3,7 +3,7 @@
 # m h   dom mon dow   command
 # create index file daily
 0   7   *   *   *     echo '<a href="last_7d/">Zing stats for last 7 days</a><br><a href="last_30d/">Zing stats for last 30 days</a>' > /var/www/html/index.html
-# generate 7 day stats every 5 min
-*/5 *   *   *   *     /usr/local/bin/zing_stats.py -l /dev/stderr -o /var/www/html --projects /projects.json
+# generate 7 day stats every 15 min
+*/15 *   *   *   *     /usr/local/bin/zing_stats.py -l /dev/stderr -o /var/www/html --projects /projects.json
 # generate 30 day stats every hour
 0   */1 *   *   *     /usr/local/bin/zing_stats.py -r 720 -l /dev/stderr -o /var/www/html --projects /projects.json
