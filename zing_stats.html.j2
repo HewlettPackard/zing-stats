@@ -16,20 +16,21 @@
         <!-- Latest compiled and minified JavaScript -->
         <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
 
-        <!-- http://tablesorter.com/ -->
+        <!-- https://mottie.github.io/tablesorter/docs/ -->
         <!-- https://stackoverflow.com/a/18049842 -->
-        <script src="http://cdn.rawgit.com/christianbach/tablesorter/07e0918254df3c2057d6d8e4653a0769f1881412/jquery.tablesorter.min.js"></script>
-
-	<script type="text/javascript" id="js">$(document).ready(function() {
-	// call the tablesorter plugin
-	$("table").tablesorter({
-		// define a custom text extraction function
-		// treat nan as 0 for now (TODO scrub this from df)
-		textExtraction: function(node) {
-			return node.textContent.toLowerCase().replace(/nan/,0);
-		}
+        <!-- https://stackoverflow.com/a/14251903 -->
+        <link rel="stylesheet" href="http://cdn.rawgit.com/Mottie/tablesorter/v2.29.6/dist/css/theme.blue.min.css">
+        <script src="http://cdn.rawgit.com/Mottie/tablesorter/v2.29.6/dist/js/jquery.tablesorter.min.js"></script> 
+        <script src="http://cdn.rawgit.com/Mottie/tablesorter/v2.29.6/dist/js/jquery.tablesorter.widgets.min.js"></script> 
+<script>
+	$(function(){
+	  $("table").tablesorter({
+theme: 'blue',
+widgets: ['zebra']
+});
 	});
-	}); </script>
+	</script>
+
         <!-- plot.ly js -->
         <script src="https://cdn.plot.ly/plotly-1.25.2.min.js"></script>
 
@@ -118,7 +119,7 @@
             </div>
             <div class="row">
                 <div class="table-responsive">
-                    <table class="table table-striped tablesorter">
+                    <table class="tablesorter">
                         <thead>
                         <tr>
                             <th>Project</th>
@@ -135,7 +136,7 @@
                             <th>Reverify count (mean)</th>
                         </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="avoid-sort">
                         <tr>
                             <th>Total</th>
                             <th>{{ '%0.0f' % df['total']['created'].sum()|float }}</th>
@@ -158,7 +159,8 @@
                             <th>{{ '%0.1f' % df['total']['recheck'].mean()|float }}</th>
                             <th>{{ '%0.1f' % df['total']['reverify'].mean()|float }}</th>
                         </tr>
-
+			</tbody>
+			<tbody>
                         {% for project in projects_to_report|sort if project != 'total' %}
                             <tr>
                                 <td>{{ project }}</td>
