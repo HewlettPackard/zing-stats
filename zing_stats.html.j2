@@ -93,7 +93,7 @@ widgets: ['zebra']
                     <h1> {{ title }} </h1>
                 </div>
                 <ul class="nav nav-tabs">
-                    {% for group in group_list|sort %}
+                    {% for group in group_list %}
                         {% set is_active, url = "", group.lower() %}
                         {% if group == 'All' %}
                             {% set url = 'index' %}
@@ -122,7 +122,9 @@ widgets: ['zebra']
                     <table class="tablesorter">
                         <thead>
                         <tr>
+                            <th></th>
                             <th>Project</th>
+                            <th>Type</th>
                             <th>Changes/PRs created</th>
                             <th>Changes/PRs updated</th>
                             <th>Changes/PRs merged</th>
@@ -138,7 +140,9 @@ widgets: ['zebra']
                         </thead>
                         <tbody class="avoid-sort">
                         <tr>
+                            <th></th>
                             <th>Total</th>
+                            <th></th>
                             <th>{{ '%0.0f' % df['total']['created'].sum()|float }}</th>
                             <th>{{ '%0.0f' % df['total']['updated'].sum()|float }}</th>
                             <th>{{ '%0.0f' % df['total']['merged'].sum()|float }}</th>
@@ -183,7 +187,9 @@ widgets: ['zebra']
 			<tbody>
                         {% for project in projects_to_report|sort if project != 'total' %}
                             <tr>
+                                <td>{{ loop.index }}</td>
                                 <td>{{ project }}</td>
+                                <td>{{ projects_map[project] }}</td>
                                 <td>{{ '%0.0f' % df[project]['created'].sum()|float }}</td>
                                 <td>{{ '%0.0f' % df[project]['updated'].sum()|float }}</td>
                                 <td>{{ '%0.0f' % df[project]['merged'].sum()|float }}</td>
