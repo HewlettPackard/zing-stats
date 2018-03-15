@@ -252,7 +252,6 @@ def write_html(args, df, num_changes, start_dt, finish_dt, projects):
         if name not in teams_map[team]:
             teams_map[team].append(name)
 
-    systems_map = dict()
     projects_map = dict()
     for system in ['gerrit', 'github']:
         teams_map[system] = list()
