@@ -251,6 +251,16 @@ def write_html(args, df, num_changes, start_dt, finish_dt, projects):
             teams_map['All'].append(name)
         if name not in teams_map[team]:
             teams_map[team].append(name)
+
+    systems_map = dict()
+    projects_map = dict()
+    for system in ['gerrit', 'github']:
+        teams_map[system] = list()
+        for project in projects[system]:
+            name = project['name']
+            projects_map[name] = system
+            if name not in teams_map[system]:
+                teams_map[system].append(name)
     log.debug('teams map: %s', teams_map)
 
     if args.range_hours <= 24:
@@ -260,9 +270,19 @@ def write_html(args, df, num_changes, start_dt, finish_dt, projects):
     all_projects = teams_map['All']
     for team in sorted(teams_map):
         team_projects = teams_map[team]
-        teams = teams_map.keys()
+        teams = sorted(teams_map.keys())
+        # Explicit ordering of some items, better done in the template
+        # but not clear how to easily do it
+        all_index = teams.index('All')
+        teams.insert(0, teams.pop(all_index))
+        gerrit_index = teams.index('gerrit')
+        teams.insert(1, teams.pop(gerrit_index))
+        github_index = teams.index('github')
+        teams.insert(2, teams.pop(github_index))
+
         html = generate_html(args, df, num_changes, start_dt, finish_dt,
-                             team_projects, all_projects, team, teams)
+                             team_projects, all_projects, projects_map,
+                             team, teams)
         dir_path = os.path.join(args.output_dir, file_prefix)
         if team == 'All':
             file_name = 'index.html'
@@ -955,7 +975,7 @@ def debug_msg(field, counter, job_or_run, project_name, change_id, message_id,
 
 
 def generate_html(args, df, num_changes, start_dt, finish_dt,
-                  projects, all_projects,
+                  projects, all_projects, projects_map,
                   group=None, groups=[]):
     """
     Returns html report from a dataframe for a specific project
@@ -1034,7 +1054,8 @@ def generate_html(args, df, num_changes, start_dt, finish_dt,
         changes_plot=plot_changes(df_plot, group),
         ci_capacity_plot=plot_ci_capacity(args, df_plot, group),
         ci_job_time_plot=plot_ci_job_time(args, df_plot, group),
-        status_plot=plot_ci_success_failure(df_plot, group))
+        status_plot=plot_ci_success_failure(df_plot, group),
+        projects_map=projects_map)
     return html
 
 
