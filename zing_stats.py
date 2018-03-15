@@ -119,9 +119,6 @@ def main():
     parser.add_argument('-q', '--quiet', dest='log_quietly',
                         action='store_true',
                         help='Show only ERROR log messages on stderr.')
-    parser.add_argument('-t', '--trace', dest='log_trace',
-                        action='store_true',
-                        help='Show TRACE level output in logfile.')
     parser.add_argument('-l', '--logfile',
                         help='''
                         Name of the file to log messages to
@@ -132,8 +129,6 @@ def main():
     parser.add_argument('-o', '--output-dir', dest='output_dir',
                         default='/var/www/html/zing/stats/',
                         help='Path to output files to (def: %(default)s).')
-    parser.add_argument('--no-log', dest='no_logfile', action='store_true',
-                        help='Do not write log output to file.')
     parser.add_argument('-s', '--secure', dest='verify_https_requests',
                         action='store_true',
                         help='Verify https requests (def: %(default)s).')
@@ -713,7 +708,7 @@ def get_merged_timestamp(change):
     """
     merged_ts = change.get('submitted', None)
     if not merged_ts:
-        log.warn('Warning - merged change %s is missing the submitted'
+        log.debug('Warning - merged change %s is missing the submitted'
                  ' timestamp, using updated timestamp instead',
                  change['id'])
         merged_ts = change['updated']
@@ -1260,12 +1255,13 @@ def configure_logging(args):
     ch.setFormatter(ch_format)
     logging.getLogger().addHandler(ch)
 
-    if not args.no_logfile:
+    if args.logfile:
         fh = logging.FileHandler(args.logfile, delay=True)
-        fh.setLevel(logging.DEBUG)
-        # TODO, add custom trace level for json dumps
-        # if args.log_trace:
-        #     fh.setLevel(TRACE_LOGGING_LEVEL)
+        fh.setLevel(logging.INFO)
+        if args.log_quietly:
+            fh.setLevel(logging.ERROR)
+        elif args.log_verbosely:
+            fh.setLevel(logging.DEBUG)
         log_format = (
             '%(asctime)s: %(process)d:%(thread)d %(levelname)s - %(message)s'
         )
