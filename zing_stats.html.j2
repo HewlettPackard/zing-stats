@@ -142,9 +142,17 @@ widgets: ['zebra']
                             <th>{{ '%0.0f' % df['total']['created'].sum()|float }}</th>
                             <th>{{ '%0.0f' % df['total']['updated'].sum()|float }}</th>
                             <th>{{ '%0.0f' % df['total']['merged'].sum()|float }}</th>
-                            <th>{{ '%0.1f' % df['total']['revisions'].mean()|float }}</th>
+                            {% if df['total']['revisions'].size > 0 %}
+                                <th>{{ '%0.1f' % df['total']['revisions'].mean()|float }}</th>
+                            {% else %}
+                                <th>0.0</th>
+                            {% endif %}
                             <th>{{ '%0.1f' % (df['total']['ci_total_time_sec'].sum()/60.0)|float }}min</th>
-                            <th>{{ '%0.1f' % (df['total']['ci_longest_time_sec'].max()/60.0)|float }} min</th>
+                            {% if df['total']['ci_longest_time_sec'].size > 0 %}
+                                <th>{{ '%0.1f' % (df['total']['ci_longest_time_sec'].max()/60.0)|float }} min</th>
+                            {% else %}
+                                <th>0.0</th>
+                            {% endif %}
                             {% set ci_total = df['total']['ci_success'].sum() + df['total']['ci_failure'].sum() %}
                             {% if ci_total <= 0 %}
                                 {% set ci_success = 0 %}
@@ -155,9 +163,21 @@ widgets: ['zebra']
                             {% endif %}
                             <th>{{ '%0.1f' % (ci_success * 100)|float }}%</th>
                             <th>{{ '%0.1f' % (ci_failure * 100)|float }}%</th>
-                            <th>{{ '%0.1f' % (df['total']['lifespan_sec'].mean()/3600)|float }} hour</th>
-                            <th>{{ '%0.1f' % df['total']['recheck'].mean()|float }}</th>
-                            <th>{{ '%0.1f' % df['total']['reverify'].mean()|float }}</th>
+                            {% if df['total']['lifespan_sec'].size > 0 %}
+                                <th>{{ '%0.1f' % (df['total']['lifespan_sec'].mean()/3600)|float }} hour</th>
+                            {% else %}
+                                <th>0.0</th>
+                            {% endif %}
+                            {% if df['total']['recheck'].size > 0 %}
+                                <th>{{ '%0.1f' % df['total']['recheck'].mean()|float }}</th>
+                            {% else %}
+                                <th>0.0</th>
+                            {% endif %}
+                            {% if df['total']['reverify'].size > 0 %}
+                                <th>{{ '%0.1f' % df['total']['reverify'].mean()|float }}</th>
+                            {% else %}
+                                <th>0.0</th>
+                            {% endif %}
                         </tr>
 			</tbody>
 			<tbody>
@@ -167,9 +187,17 @@ widgets: ['zebra']
                                 <td>{{ '%0.0f' % df[project]['created'].sum()|float }}</td>
                                 <td>{{ '%0.0f' % df[project]['updated'].sum()|float }}</td>
                                 <td>{{ '%0.0f' % df[project]['merged'].sum()|float }}</td>
-                                <td>{{ '%0.1f' % df[project]['revisions'].mean()|float }}</td>
+                                {% if df[project]['revisions'].size > 0 %}
+                                    <td>{{ '%0.1f' % df[project]['revisions'].mean()|float }}</td>
+                                {% else %}
+                                    <td>0.0</td>
+                                {% endif %}
                                 <td>{{ '%0.1f' % (df[project]['ci_total_time_sec'].sum()/60.0)|float }} min</td>
-                                <td>{{ '%0.1f' % (df[project]['ci_longest_time_sec'].max()/60.0)|float }} min</td>
+                                {% if df[project]['ci_longest_time_sec'].size > 0 %}
+                                    <td>{{ '%0.1f' % (df[project]['ci_longest_time_sec'].max()/60.0)|float }} min</td>
+                                {% else %}
+                                    <td>0.0</td>
+                                {% endif %}
                                 {% set ci_total = df[project]['ci_success'].sum() + df[project]['ci_failure'].sum() %}
                                 {% if ci_total <= 0 %}
                                     {% set ci_success = 0 %}
@@ -180,9 +208,21 @@ widgets: ['zebra']
                                 {% endif %}
                                 <td>{{ '%0.1f' % (ci_success * 100)|float }}%</td>
                                 <td>{{ '%0.1f' % (ci_failure * 100)|float }}%</td>
-                                <td>{{ '%0.1f' % (df[project]['lifespan_sec'].mean()/3600)|float }} hour</td>
-                                <td>{{ '%0.1f' % df[project]['recheck'].mean()|float }}</td>
-                                <td>{{ '%0.1f' % df[project]['reverify'].mean()|float }}</td>
+                                {% if df[project]['lifespan_sec'].size > 0 %}
+                                    <td>{{ '%0.1f' % (df[project]['lifespan_sec'].mean()/3600)|float }} hour</td>
+                                {% else %}
+                                    <td>0.0</td>
+                                {% endif %}
+                                {% if df[project]['recheck'].size > 0 %}
+                                    <td>{{ '%0.1f' % df[project]['recheck'].mean()|float }}</td>
+                                {% else %}
+                                    <td>0.0</td>
+                                {% endif %}
+                                {% if df[project]['reverify'].size > 0 %}
+                                    <td>{{ '%0.1f' % df[project]['reverify'].mean()|float }}</td>
+                                {% else %}
+                                    <td>0.0</td>
+                                {% endif %}
                             </tr>
                         {% endfor %}
 			</tbody>
