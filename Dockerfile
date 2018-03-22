@@ -17,7 +17,7 @@
 
 FROM python:2.7-slim
 
-LABEL version="0.4.1"
+LABEL version="0.4.2"
 LABEL description="zing stats generator"
 LABEL maintainer "Stephen Mulcahy <stephen.mulcahy@hpe.com>"
 
