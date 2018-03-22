@@ -78,12 +78,18 @@ def main():
                "# analyse stats previously gathered in changes.json\n"
                "./zing_stats.py -r 168 -j changes.json\n"
                "# analyse a set of gerrit and github projects with github auth\n"
-               "./zing_stats.py --github-host https://github.example.com --github-user username --github-token 3ec57a --gerrit-host https://gerrit.example.com --projects projects.json\n",
+               "./zing_stats.py --github-host https://github.example.com --github-user username --github-token 3ec57a --gerrit-host https://gerrit.example.com --projects projects.json\n"
+               "# analyse a set of projects with specified branches (master and devel only)\n"
+               "./zing_stats.py --github-host https://github.example.com --gerrit-host https://gerrit.example.com --projects projects.json --branch master --branch devel\n",
         formatter_class=argparse.RawDescriptionHelpFormatter)
     script_name = __file__
     parser.set_defaults(
         script_dir=os.path.abspath((os.path.dirname(script_name)))
     )
+    parser.add_argument('-b', '--branch', dest='branches',
+                        action='append',
+                        help='Restrict reporting to specified branches ('
+                             'defaulting to all branches).')
     parser.add_argument('--gerrit-url', dest='gerrit_url',
                         default=os.getenv('GERRIT_URL',
                                           'https://gerrit.example.net'),
@@ -171,6 +177,10 @@ def main():
     args = parser.parse_args()
     configure_logging(args)
     log.debug("Called with args: %s", args)
+
+    if args.branches:
+        log.info('Reporting only on changes to these branches: %s',
+                ','.join(args.branches))
 
     # enable logging multiple columns in output
     pd.set_option('display.width', 1000)
@@ -344,6 +354,10 @@ def gather_github_prs(args, oldest_timestamp, projects):
             for pr in results:
                 log.debug(json.dumps(pr, sort_keys=True, indent=4,
                                      separators=(',', ': ')))
+		if args.branches and pr['base']['ref'] not in args.branches:
+                    log.debug('Skipping %s on %s which is not in branches to analyse (%s)',
+                            pr['id'], pr['base']['ref'], ','.join(args.branches))
+                    continue
                 current_timestamp = datetime.strptime(pr['updated_at'],
                                                       GITHUB_TIMESTAMP)
                 if current_timestamp < oldest_timestamp:
@@ -409,6 +423,10 @@ def gather_gerrit_changes(args, oldest_timestamp, projects):
             if change['project'] not in projects_gerrit:
                 log.debug('Skipping %s as %s not in projects of interest',
                           change['id'], change['project'])
+                continue
+            if args.branches and change['branch'] not in args.branches:
+                log.debug('Skipping %s on %s which is not in branches to analyse (%s)',
+                          change['id'], change['branch'], ','.join(args.branches))
                 continue
             if change['id'] in changes:
                 log.debug(json.dumps(change,
