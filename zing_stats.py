@@ -1220,10 +1220,14 @@ def plot_changes(df_plot, group):
         name='Merged',
         x=df_plot.index,
         y=df_plot['merged'])
+    updated_line = go.Scatter(
+        name='Updated',
+        x=df_plot.index,
+        y=df_plot['updated'])
     plot_title = "Changes/PRs (%s projects)" % group
     changes_plot = plotly.offline.plot(
         {
-            "data": [created_line, submitted_line],
+            "data": [created_line, submitted_line, updated_line],
             "layout": go.Layout(title=plot_title)
         },
         show_link=False,
