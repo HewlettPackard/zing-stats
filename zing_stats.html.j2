@@ -195,8 +195,8 @@ widgets: ['zebra']
                                 <th>0.0</th>
                             {% endif %}
                         </tr>
-			</tbody>
-			<tbody>
+			        </tbody>
+			        <tbody>
                         {% for project in projects_to_report|sort if project != 'total' %}
                             <tr>
                                 <td>{{ loop.index }}</td>
@@ -252,7 +252,7 @@ widgets: ['zebra']
                                 {% endif %}
                             </tr>
                         {% endfor %}
-			</tbody>
+			            </tbody>
                     </table>
 
                 </div>
@@ -267,6 +267,15 @@ widgets: ['zebra']
                             Generated at {{ finish_dt.strftime('%H:%M') }} on {{ finish_dt.strftime('%d-%b-%Y') }} by https://github.com/HewlettPackard/zing-stats,
                             bugs to <a href={{ report_issue_link }}>{{ report_issue_link }}</a>, queries to
                             <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>
+                        </small>
+                    </div>
+                    <div class="col-md-10 col-md-offset-1">
+                        <small>
+                            Inaccessible project:
+                            {% for proj in not_found_proj|sort %}
+                                {{ proj }}
+                                {{ "," if not loop.last }}
+                            {% endfor %}
                         </small>
                     </div>
                 </div>

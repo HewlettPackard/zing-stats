@@ -194,13 +194,16 @@ def main():
     projects = read_from_json(args.projects)
 
     gerrit_change_count, gerrit_changes = gather_gerrit_changes(args, start_dt, projects)
-    github_pr_count, github_prs = gather_github_prs(args, start_dt, projects)
+    github_pr_count, github_prs, not_found_proj = gather_github_prs(args,
+                                                                    start_dt,
+                                                                    projects)
     change_count = gerrit_change_count + github_pr_count
 
     df = generate_dataframes(args, gerrit_changes, github_prs, start_dt)
 
     if args.report_format == 'html':
-        write_html(args, df, change_count, start_dt, finish_dt, projects)
+        write_html(args, df, change_count, start_dt, finish_dt, projects,
+                   not_found_proj)
 
 
 def read_from_json(json_file):
@@ -249,7 +252,8 @@ def project_dataframe(df, df_change_stats, df_ci_stats, project):
     log.debug('df[%s]:\n%s', project, df[project])
 
 
-def write_html(args, df, num_changes, start_dt, finish_dt, projects):
+def write_html(args, df, num_changes, start_dt, finish_dt, projects,
+               not_found_proj):
     teams_map = dict()
     teams_map['All'] = list()
     for project in projects['gerrit'] + projects['github']:
@@ -291,7 +295,7 @@ def write_html(args, df, num_changes, start_dt, finish_dt, projects):
 
         html = generate_html(args, df, num_changes, start_dt, finish_dt,
                              team_projects, all_projects, projects_map,
-                             team, teams)
+                             not_found_proj, team, teams)
         dir_path = os.path.join(args.output_dir, file_prefix)
         if team == 'All':
             file_name = 'index.html'
@@ -315,6 +319,7 @@ def gather_github_prs(args, oldest_timestamp, projects):
              ', '.join(sorted(projects_github)))
     total_prs = 0
     prs = dict()
+    not_found_proj = list()
     session = requests.Session()
     for project in projects_github:
         prs[project] = dict()
@@ -345,6 +350,7 @@ def gather_github_prs(args, oldest_timestamp, projects):
                               'providing a --github-token '
                               'with access to this project)', project)
                 prs.pop(project)
+                not_found_proj.append(project)
                 break
             results = response.json()
             # TODO use functools and helper function to have log.debug() only
@@ -384,7 +390,7 @@ def gather_github_prs(args, oldest_timestamp, projects):
 
     log.info('Gathered %d total PRs', total_prs)
 
-    return total_prs, prs
+    return total_prs, prs, not_found_proj
 
 
 # TODO add support for gerrit user and password (check if ever useful)
@@ -1055,7 +1061,7 @@ def debug_msg(field, counter, job_or_run, project_name, change_id, message_id,
 
 def generate_html(args, df, num_changes, start_dt, finish_dt,
                   projects, all_projects, projects_map,
-                  group=None, groups=[]):
+                  not_found_proj, group=None, groups=[]):
     """
     Returns html report from a dataframe for a specific project
     """
@@ -1136,7 +1142,8 @@ def generate_html(args, df, num_changes, start_dt, finish_dt,
         ci_capacity_plot=plot_ci_capacity(args, df_plot, group),
         ci_job_time_plot=plot_ci_job_time(args, df_plot, group),
         status_plot=plot_ci_success_failure(df_plot, group),
-        projects_map=projects_map)
+        projects_map=projects_map,
+        not_found_proj=not_found_proj)
     return html
 
 
