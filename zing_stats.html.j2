@@ -128,6 +128,9 @@ widgets: ['zebra']
                             <th>Changes/PRs created</th>
                             <th>Changes/PRs updated</th>
                             <th>Changes/PRs merged</th>
+                            <th>Successul promotions</th>
+                            <th>Failed promotions</th>
+                            <th>Promotion success</th>
                             <th>Patches/Commits per change/PR (mean)</th>
                             <th>CI time (total)</th>
                             <th>CI longest job duration (max)</th>
@@ -146,6 +149,15 @@ widgets: ['zebra']
                             <th>{{ '%0.0f' % df['total']['created'].sum()|float }}</th>
                             <th>{{ '%0.0f' % df['total']['updated'].sum()|float }}</th>
                             <th>{{ '%0.0f' % df['total']['merged'].sum()|float }}</th>
+                            <th>{{ '%0.0f' % df['total']['promotion_success'].sum()|float }}</th>
+                            <th>{{ '%0.0f' % df['total']['promotion_failure'].sum()|float }}</th>
+                            {% set promotion_total = df['total']['promotion_success'].sum() + df['total']['promotion_failure'].sum() %}
+                            {% if promotion_total <= 0 %}
+                                {% set pct_promotion_success = 0 %}
+                            {% else %}
+                                {% set pct_promotion_success = df['total']['promotion_success'].sum()/promotion_total %}
+                            {% endif %}
+                            <th>{{ '%0.1f' % (pct_promotion_success * 100)|float }}%</th>
                             {% if df['total']['revisions'].size > 0 %}
                                 <th>{{ '%0.1f' % df['total']['revisions'].mean()|float }}</th>
                             {% else %}
@@ -193,6 +205,15 @@ widgets: ['zebra']
                                 <td>{{ '%0.0f' % df[project]['created'].sum()|float }}</td>
                                 <td>{{ '%0.0f' % df[project]['updated'].sum()|float }}</td>
                                 <td>{{ '%0.0f' % df[project]['merged'].sum()|float }}</td>
+                                <td>{{ '%0.0f' % df[project]['promotion_success'].sum()|float }}</td>
+                                <td>{{ '%0.0f' % df[project]['promotion_failure'].sum()|float }}</td>
+                                {% set promotion_total = df[project]['promotion_success'].sum() + df[project]['promotion_failure'].sum() %}
+                                {% if promotion_total <= 0 %}
+                                    {% set pct_promotion_success = 0 %}
+                                {% else %}
+                                    {% set pct_promotion_success = df[project]['promotion_success'].sum()/promotion_total %}
+                                {% endif %}
+                                <td>{{ '%0.1f' % (pct_promotion_success * 100)|float }}%</td>
                                 {% if df[project]['revisions'].size > 0 %}
                                     <td>{{ '%0.1f' % df[project]['revisions'].mean()|float }}</td>
                                 {% else %}
