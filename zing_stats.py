@@ -354,9 +354,10 @@ def gather_github_prs(args, oldest_timestamp, projects):
             for pr in results:
                 log.debug(json.dumps(pr, sort_keys=True, indent=4,
                                      separators=(',', ': ')))
-		if args.branches and pr['base']['ref'] not in args.branches:
-                    log.debug('Skipping %s on %s which is not in branches to analyse (%s)',
-                            pr['id'], pr['base']['ref'], ','.join(args.branches))
+                if args.branches and pr['base']['ref'] not in args.branches:
+                    log.debug(
+                        'Skipping %s on %s (not in branches to analyse - %s)',
+                        pr['id'], pr['base']['ref'], ','.join(args.branches))
                     continue
                 current_timestamp = datetime.strptime(pr['updated_at'],
                                                       GITHUB_TIMESTAMP)
@@ -425,8 +426,9 @@ def gather_gerrit_changes(args, oldest_timestamp, projects):
                           change['id'], change['project'])
                 continue
             if args.branches and change['branch'] not in args.branches:
-                log.debug('Skipping %s on %s which is not in branches to analyse (%s)',
-                          change['id'], change['branch'], ','.join(args.branches))
+                log.debug('Skipping %s on %s (not in branches to analyse - %s)',
+                          change['id'], change['branch'],
+                          ','.join(args.branches))
                 continue
             if change['id'] in changes:
                 log.debug(json.dumps(change,
@@ -481,6 +483,18 @@ def parse_ci_job_comments(msg):
     ci_run_patt = 'Patch Set (?P<num>\d+): Verified(?P<v_score>\S+)\s+Build (?P<status>\S+)\s+(?P<jobs>.+)'  # noqa
 
     return __parse_change_messages(msg['message'], ci_run_patt)
+
+
+def parse_promotion_success(msg):
+    promotion_success_patt = '(Patch Set \d+:\n\n)?Promotion review .+ has brought into alpha channel' # noqa
+    promotion_success_re = re.compile(promotion_success_patt)
+    return promotion_success_re.match(msg)
+
+
+def parse_promotion_failure(msg):
+    promotion_failure_patt = '(Patch Set \d+:\n\n)?PROMOTION FAILURE\n\nPromotion of artifacts from this change into Alpha channel has failed' # noqa
+    promotion_failure_re = re.compile(promotion_failure_patt)
+    return promotion_failure_re.match(msg)
 
 
 def parse_pr_message(msg):
@@ -728,11 +742,11 @@ def github_query(args, query_url, session):
     if args.github_token:
         payload = {'access_token': args.github_token}
         response = session.get(query_url,
-                                verify=args.verify_https_requests,
-                                params=payload)
+                               verify=args.verify_https_requests,
+                               params=payload)
     else:
         response = session.get(query_url,
-                                verify=args.verify_https_requests)
+                               verify=args.verify_https_requests)
     log.debug('github query url: %s', response.url)
     return response.json()
 
@@ -746,8 +760,8 @@ def get_merged_timestamp(change):
     merged_ts = change.get('submitted', None)
     if not merged_ts:
         log.debug('Warning - merged change %s is missing the submitted'
-                 ' timestamp, using updated timestamp instead',
-                 change['id'])
+                  ' timestamp, using updated timestamp instead',
+                  change['id'])
         merged_ts = change['updated']
     return merged_ts
 
@@ -764,11 +778,30 @@ def parse_ci_stats(changes, start_dt):
     ci_longest_time_sec = defaultdict(int)
     ci_success = defaultdict(int)
     ci_failure = defaultdict(int)
+    promotion_success = defaultdict(int)
+    promotion_failure = defaultdict(int)
     for gerrit_id in changes:
         change = changes[gerrit_id]
         log.debug(change)
         for message in change['messages']:
             log.debug('message: %s', message)
+            msg_ts = message['date']
+            msg_dt = datetime.strptime(msg_ts[:-3], GERRIT_TIMESTAMP)
+
+            # TODO refactor for injection of custom parsing in a generic way
+            # e.g. using some kind of plugins structure, promotions may be very
+            # specific to some systems (as are the promotion messages)
+            promotion_succeeded = parse_promotion_success(message['message'])
+            if promotion_succeeded and msg_dt > start_dt:
+                log.debug('%s %s (%s): promotion succeeded', change['project'],
+                          change['_number'], msg_dt)
+                promotion_success[msg_ts] += 1
+            promotion_failed = parse_promotion_failure(message['message'])
+            if promotion_failed and msg_dt > start_dt:
+                log.debug('%s %s (%s): promotion failed', change['project'],
+                          change['_number'], msg_dt)
+                promotion_failure[msg_ts] += 1
+
             ci_run = parse_ci_job_comments(message)
             log.debug('ci_run: %s', ci_run)
             if ci_run:
@@ -777,6 +810,7 @@ def parse_ci_stats(changes, start_dt):
                 ci_run_dt = datetime.strptime(ci_run_ts[:-3], GERRIT_TIMESTAMP)
 
                 # ignore messages on changes that are older than our start time
+                # TODO (just use msg_dt here and retire ci_run_ts and ci_run_dt)
                 if ci_run_dt < start_dt:
                     log.debug('discarding message on proj|change|rev|run: '
                               '%s|%s|%s|%s with date %s',
@@ -850,10 +884,13 @@ def parse_ci_stats(changes, start_dt):
     d = {'ci_total_time_sec': ci_total_time_sec,
          'ci_longest_time_sec': ci_longest_time_sec,
          'ci_success': ci_success,
-         'ci_failure': ci_failure}
+         'ci_failure': ci_failure,
+         'promotion_success': promotion_success,
+         'promotion_failure': promotion_failure}
 
     df = pd.DataFrame(d, columns=['ci_total_time_sec', 'ci_longest_time_sec',
-                                  'ci_success', 'ci_failure'])
+                                  'ci_success', 'ci_failure',
+                                  'promotion_success', 'promotion_failure'])
     log.debug('ci time status df:\n%s', df)
     return df
 
@@ -870,11 +907,32 @@ def parse_pr_ci_stats(prs, start_dt):
     ci_longest_time_sec = defaultdict(int)
     ci_success = defaultdict(int)
     ci_failure = defaultdict(int)
+    promotion_success = defaultdict(int)
+    promotion_failure = defaultdict(int)
     for pr_id in prs:
         pr = prs[pr_id]
         log.debug("pr %d", pr_id)
         for comment in pr['comments']:
             log.debug('comment: %s', comment)
+            comment_ts = comment['created_at']
+            comment_dt = datetime.strptime(comment_ts, GITHUB_TIMESTAMP)
+
+            # TODO refactor for injection of custom parsing in a generic way
+            # e.g. using some kind of plugins structure, promotions may be very
+            # specific to some systems (as are the promotion messages)
+            promotion_succeeded = parse_promotion_success(comment['body'])
+            if promotion_succeeded and comment_dt > start_dt:
+                log.debug('%s %s (%s): promotion success',
+                          pr['base']['repo']['full_name'], pr['number'],
+                          comment_dt)
+                promotion_success[comment_ts] += 1
+            promotion_failed = parse_promotion_failure(comment['body'])
+            if promotion_failed and comment_dt > start_dt:
+                log.debug('%s %s (%s): promotion failure',
+                          pr['base']['repo']['full_name'], pr['number'],
+                          comment_dt)
+                promotion_failure[comment_ts] += 1
+
             ci_run = parse_pr_message(comment)
             log.debug('ci_run: %s', ci_run)
             if ci_run:
@@ -887,6 +945,7 @@ def parse_pr_ci_stats(prs, start_dt):
                     comment['id'])
 
                 # ignore messages on changes that are older than our start time
+                # TODO (use comment_dt here and retire ci_run_ts and ci_run_dt)
                 if ci_run_dt < start_dt:
                     log.debug('discarding comment on %s with date %s',
                               msg_details, ci_run_ts)
@@ -955,10 +1014,13 @@ def parse_pr_ci_stats(prs, start_dt):
     d = {'ci_total_time_sec': ci_total_time_sec,
          'ci_longest_time_sec': ci_longest_time_sec,
          'ci_success': ci_success,
-         'ci_failure': ci_failure}
+         'ci_failure': ci_failure,
+         'promotion_success': promotion_success,
+         'promotion_failure': promotion_failure}
 
     df = pd.DataFrame(d, columns=['ci_total_time_sec', 'ci_longest_time_sec',
-                                  'ci_success', 'ci_failure'])
+                                  'ci_success', 'ci_failure',
+                                  'promotion_success', 'promotion_failure'])
     log.debug('ci time status df:\n%s', df)
     return df
 
@@ -1033,6 +1095,8 @@ def generate_html(args, df, num_changes, start_dt, finish_dt,
         'ci_longest_time_sec': 'max',
         'ci_success': 'sum',
         'ci_failure': 'sum',
+        'promotion_success': 'sum',
+        'promotion_failure': 'sum',
         'lifespan_sec': 'max',
         'recheck': 'sum',
         'reverify': 'sum',
