@@ -1143,7 +1143,8 @@ def generate_html(args, df, num_changes, start_dt, finish_dt,
         ci_job_time_plot=plot_ci_job_time(args, df_plot, group),
         status_plot=plot_ci_success_failure(df_plot, group),
         projects_map=projects_map,
-        not_found_proj=not_found_proj)
+        not_found_proj=not_found_proj,
+        zs_ver=os.getenv('TAG', ''))
     return html
 
 

@@ -264,7 +264,11 @@ widgets: ['zebra']
                     </div>
                     <div class="col-md-10 col-md-offset-1">
                         <small>
-                            Generated at {{ finish_dt.strftime('%H:%M') }} on {{ finish_dt.strftime('%d-%b-%Y') }} by https://github.com/HewlettPackard/zing-stats,
+                            Generated at {{ finish_dt.strftime('%H:%M') }} on {{ finish_dt.strftime('%d-%b-%Y') }} by https://github.com/HewlettPackard/zing-stats
+                            {% if zs_ver %}
+                             ({{ zs_ver }})
+                            {% endif %}
+                            ,
                             bugs to <a href={{ report_issue_link }}>{{ report_issue_link }}</a>, queries to
                             <a href="mailto:{{ contact_email }}">{{ contact_email }}</a>
                         </small>
