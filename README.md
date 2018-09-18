@@ -39,7 +39,7 @@ git clone <url to zing-stats repo>
 sudo apt install virtualenv
 virtualenv ~/venv/zing-stats
 . ~/venv/zing-stats/bin/activate
-pip install -r requirements.txt
+python setup.py install
 ```
 
 ## Running

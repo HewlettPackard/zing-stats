@@ -245,7 +245,7 @@ def project_dataframe(df, df_change_stats, df_ci_stats, project):
             'Already processed %s, is the same project in gerrit and github?',
             project)
         exit(1)
-    df[project] = pd.concat([df_change_stats, df_ci_stats])
+    df[project] = pd.concat([df_change_stats, df_ci_stats], sort=True)
     df[project].index = pd.to_datetime(df[project].index)
     df[project].sort_index(inplace=True)
     df[project].fillna(value=0, inplace=True)
