@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import zing_stats
+import zingstats
 
 
 def test_helloworld():
@@ -51,11 +51,11 @@ def test_parse_gerrit_change_message():
             'message': 'Patch Set 1: Verified+1\n\nBuild succeeded\n\n- https://zing.example.net/jenkins/job/test-check/6/ : SUCCESS in 7s'  # noqa
         },
     ]
-    msg0 = zing_stats.parse_ci_job_comments(messages[0])
+    msg0 = zingstats.parse_ci_job_comments(messages[0])
     assert msg0 == {}
-    msg1 = zing_stats.parse_ci_job_comments(messages[1])
+    msg1 = zingstats.parse_ci_job_comments(messages[1])
     assert msg1 == {}
-    msg2 = zing_stats.parse_ci_job_comments(messages[2])
+    msg2 = zingstats.parse_ci_job_comments(messages[2])
     assert msg2['num'] == '1'
     assert msg2['status'] == 'succeeded'
     assert msg2['v_score'] == '+1'
@@ -124,9 +124,9 @@ def test_parse_github_change_message():
             }
         },
     ]
-    msg0 = zing_stats.parse_pr_message(messages[0])
+    msg0 = zingstats.parse_pr_message(messages[0])
     assert msg0 == {}
-    msg1 = zing_stats.parse_pr_message(messages[1])
+    msg1 = zingstats.parse_pr_message(messages[1])
     assert msg1['num'] == None
     assert msg1['status'] == 'succeeded'
     assert msg1['v_score'] == None
