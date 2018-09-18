@@ -78,7 +78,8 @@ class GerritRevision(Revision):
                                             GerritChange.GERRIT_FORMAT)
 
         session = requests.Session()
-        for file_name in revision['files']:
+        # TODO make ALL_FILES gathering toggleable, it is expensive/slow
+        for file_name in revision.get('files', list()):
             self._files[file_name] = dict()
             file_url = '%s/files/%s' % (self.url, urllib.quote_plus(file_name))
             diff_url = '%s/diff' % file_url
@@ -108,6 +109,8 @@ class Change(object):
         self.long_id = None
         self.change_id = None
         self.number = None
+        self.project = None
+        self.branch = None
         self.status = None
         self.created_dt = None
         self.updated_dt = None
@@ -120,6 +123,9 @@ class Change(object):
         for revision_id in sorted(self._revisions):
             yield self._revisions[revision_id]
 
+    def rev_count(self):
+        return len(self._revisions)
+
 
 class GerritChange(Change):
     GERRIT_FORMAT = '%Y-%m-%d %H:%M:%S.%f'
@@ -130,6 +136,8 @@ class GerritChange(Change):
         self.long_id = change['id']
         self.change_id = change['change_id']
         self.number = change['_number']
+        self.project = change['project']
+        self.branch = change['branch']
         self.status = change['status']
         self._created_ts = change['created'][:-3]
         self.created_dt = datetime.strptime(self._created_ts,
@@ -162,10 +170,12 @@ class GerritChange(Change):
 
 
 class Changes(object):
-    def __init__(self, url, query, start_dt, finish_dt,
+    def __init__(self, url, query, projects, branches, start_dt, finish_dt,
                  verify_https_requests=False):
         self.url = url
         self.query = query
+        self.projects = projects
+        self.branches = branches
         self.start_dt = start_dt
         self.finish_dt = finish_dt
         self.query_start = 0
@@ -176,11 +186,15 @@ class Changes(object):
         for long_id in self.changes:
             yield self.changes[long_id]
 
-    def size(self):
+    def __len__(self):
         return len(self.changes)
 
     def add(self, change):
         self.changes[change.long_id] = change
+
+    # TODO implement better__getitem__()
+    def __getitem__(self, key):
+        return self.changes[key]
 
     @staticmethod
     def pretty_json(json_data):
@@ -190,16 +204,21 @@ class Changes(object):
 
 
 class GerritChanges(Changes):
-    def __init__(self, url, query, start_dt, finish_dt,
+    def __init__(self, url, query, projects, branches, start_dt, finish_dt,
                  verify_https_requests=False,
                  query_size=100, max_changes=None):
-        super(GerritChanges, self).__init__(url, query, start_dt, finish_dt,
+        super(GerritChanges, self).__init__(url, query, projects, branches,
+                                            start_dt, finish_dt,
                                             verify_https_requests)
         self.query_size = query_size
         self.max_changes = max_changes
 
     def gather(self):
-        log.info('Gathering changes from %s', self.url)
+        log.info('Gathering gerrit changes from %s for projects: %s and branches: %s',
+                self.url,
+                ', '.join(sorted(self.projects)),
+                ', '.join(sorted(self.branches)))
+
         results = [{'_more_changes': True}]
         session = requests.Session()
         while '_more_changes' in results[-1].keys() and \
@@ -208,7 +227,9 @@ class GerritChanges(Changes):
                       self.query_start)
             payload = {
                 'q': self.query,
-                'o': ['ALL_REVISIONS', 'MESSAGES', 'ALL_FILES'],
+                # TODO make ALL_FILES gathering toggleable, it is expensive/slow
+                #'o': ['ALL_REVISIONS', 'MESSAGES', 'ALL_FILES'],
+                'o': ['ALL_REVISIONS', 'MESSAGES'],
                 'start': self.query_start,
                 'n': self.query_size}
             query = ('%s/changes/' % self.url)
@@ -224,6 +245,16 @@ class GerritChanges(Changes):
                           self.query_start, self.query_size)
                 change = GerritChange(change_json, self.url,
                                       self.verify_https_requests)
+
+                if self.projects and change.project not in self.projects:
+                    log.debug('Change id %s has project %s not in projects list, skipping',
+                             change.long_id, change.project)
+                    continue
+
+                if self.branches and change.branch not in self.branches:
+                    log.debug('Change id %s has branch %s not in branches list, skipping',
+                             change.long_id, change.branch)
+                    continue
 
                 if change.long_id in self.changes:
                     log.warn('Change id %s already stored, not storing again',
@@ -253,3 +284,4 @@ class GerritChanges(Changes):
     def clean_gerrit_response(response):
             """Strip magic junk off the start of the gerrit response."""
             return json.loads(response.text[5:])
+
