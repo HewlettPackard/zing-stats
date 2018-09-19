@@ -16,6 +16,10 @@
 # Needs to be connected to a web server container to report
 
 FROM python:2.7-slim as build
+#RUN "${VERSION:?Build argument needs to be set and non-empty.}"
+ARG VERSION
+RUN ["/bin/bash", "-c", ": ${VERSION:?Expected docker build --build-arg version=xxx ... }"]
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
         coreutils \
         curl \
@@ -29,7 +33,8 @@ ADD . /build
 RUN pip install /build
 
 FROM python:2.7-slim as prod
-LABEL version="0.5.1"
+ARG VERSION
+LABEL version=$VERSION
 LABEL description="zing stats generator"
 LABEL maintainer "Stephen Mulcahy <stephen.mulcahy@hpe.com>"
 COPY --from=build /usr/local /usr/local
