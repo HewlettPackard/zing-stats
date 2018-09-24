@@ -201,8 +201,8 @@ class GerritChanges(Changes):
                 ', '.join(sorted(self.branches)))
 
         results = [{'_more_changes': True}]
-        while '_more_changes' in results[-1].keys() and \
-                results[-1]['_more_changes']:
+
+        while results[-1].get('_more_changes'):
             log.debug('Querying %d changes starting at %d', self.query_size,
                       self.query_start)
             payload = {
