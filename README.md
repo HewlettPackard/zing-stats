@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/HewlettPackard/zing-stats.svg?branch=master)](https://travis-ci.org/HewlettPackard/zing-stats)
 [![Docker Automated build](https://img.shields.io/docker/automated/zingstats/zing-stats.svg?maxAge=2592000?style=plastic)](https://hub.docker.com/r/zingstats/zing-stats/)
 
-&copy; Copyright 2017 Hewlett Packard Enterprise Development LP
+&copy; Copyright 2017,2018 Hewlett Packard Enterprise Development LP
 
 # zing-stats
 
