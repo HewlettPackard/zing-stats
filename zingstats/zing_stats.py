@@ -201,11 +201,13 @@ def main():
 
     gerrit_projects = [x['name'] for x in projects.get('gerrit', dict())]
     gerrit_query = 'status:open OR status:closed'
+    session = requests.Session()
+    session.verify = args.verify_https_requests
     if len(gerrit_projects) > 0:
         gerrit_changes = GerritChanges(args.gerrit_url, gerrit_query,
                                         gerrit_projects, args.branches,
                                         start_dt, finish_dt,
-                                        args.verify_https_requests,
+                                        session,
                                         args.gerrit_query_size, args.gerrit_max_changes)
         if gerrit_changes.gather():
             log.info('Gathered %d total changes', len(gerrit_changes))
