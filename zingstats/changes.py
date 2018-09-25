@@ -218,7 +218,7 @@ class Revision(object):
         self._messages.append(message)
 
     def messages(self):
-        for message in sorted(self._messages):
+        for message in self._messages:
             yield message
 
 
