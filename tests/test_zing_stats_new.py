@@ -14,15 +14,16 @@
 # limitations under the License.
 #
 
+import logging
 from datetime import datetime
 from datetime import timedelta
 
-import pytest
 import requests
 
 from zingstats import GerritChanges
 
 
+# TODO look at betamax for managing test inputs
 class TestClass(object):
     def test_empty_changes(self, requests_mock):
         url = 'http://gerrit.example.com/'
@@ -38,20 +39,28 @@ class TestClass(object):
                                 start_dt, finish_dt, session)
         assert len(changes) == 0
 
-    def test_nonempty_changes(self, requests_mock):
-        url = 'http://gerrit.example.com/'
+    def test_nonempty_changes(self, requests_mock, caplog):
+        # dumps debug output if the test fails
+        caplog.set_level(logging.DEBUG)
+
+        url = 'https://review.openstack.org'
         query = 'status:open OR status:closed'
-        projects = ['foo/blah']
-        branches = ['master']
+        projects = ['openstack/cinder', 'openstack/openstack-ansible-ops', 'openstack/networking-calico']
+        branches = ['stable/pike', 'master']
         finish_dt = datetime.now()
         start_dt = finish_dt - timedelta(hours=24)
 
-        requests_mock.get('http://gerrit.example.com//changes/?q=status%3Aopen+OR+status%3Aclosed&start=0&o=ALL_REVISIONS&o=MESSAGES&n=100', text='data')
+        # TODO move data loading out of test case
+        # TODO sanitise test file
+        data_file = 'tests/data/test_nonempty_changes.response'
+        with open(data_file, 'r') as f:
+            test_data = f.read()
+        requests_mock.get('https://review.openstack.org/changes/?q=status%3Aopen+OR+status%3Aclosed&start=0&o=ALL_REVISIONS&o=MESSAGES&n=100', text=test_data)
         session = requests.Session()
         changes = GerritChanges(url, query, projects, branches,
                                 start_dt, finish_dt, session)
         changes.gather()
-        assert len(changes) == 5
+        assert len(changes) == 3
 
     def test_fixture(self, requests_mock):
         requests_mock.get('http://gerrit.example.com/', text='data')

@@ -1,0 +1,444 @@
+)]}'
+[
+  {
+    "id": "openstack%2Fopenstack-ansible-ops~master~I2790b6d848a2960d89f122b0f5bb1cf714c68809",
+    "project": "openstack/openstack-ansible-ops",
+    "branch": "master",
+    "topic": "consistent-defaults",
+    "hashtags": [],
+    "change_id": "I2790b6d848a2960d89f122b0f5bb1cf714c68809",
+    "subject": "MNAIO: Correct README regarding DATA_DISK_DEVICE",
+    "status": "NEW",
+    "created": "2018-09-20 11:39:01.000000000",
+    "updated": "2018-09-25 16:24:41.000000000",
+    "submit_type": "MERGE_IF_NECESSARY",
+    "mergeable": true,
+    "submittable": false,
+    "insertions": 13,
+    "deletions": 6,
+    "_number": 604064,
+    "owner": {
+      "_account_id": 6816
+    },
+    "messages": [
+      {
+        "id": "3f79a3b5_1b652a45",
+        "author": {
+          "_account_id": 6816
+        },
+        "date": "2018-09-20 11:39:01.000000000",
+        "message": "Uploaded patch set 1.",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_b0276cb6",
+        "author": {
+          "_account_id": 22348
+        },
+        "date": "2018-09-20 15:17:08.000000000",
+        "message": "Patch Set 1: Verified+1\n\nBuild succeeded (check pipeline).\n\n- build-openstack-sphinx-docs http://logs.openstack.org/64/604064/1/check/build-openstack-sphinx-docs/2ebf4b5/html/ : SUCCESS in 2m 58s\n- openstack-ansible-linters http://logs.openstack.org/64/604064/1/check/openstack-ansible-linters/e4ec765/ : SUCCESS in 6m 03s\n- openstack-tox-docs http://logs.openstack.org/64/604064/1/check/openstack-tox-docs/b3fb4e2/html/ : SUCCESS in 3m 21s",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_fe5563c3",
+        "author": {
+          "_account_id": 6816
+        },
+        "date": "2018-09-25 16:24:41.000000000",
+        "message": "Patch Set 1: Code-Review+2 Workflow+1",
+        "_revision_number": 1
+      }
+    ],
+    "current_revision": "af73200d70fbc4084d881f2d2e883d28143060a3",
+    "revisions": {
+      "af73200d70fbc4084d881f2d2e883d28143060a3": {
+        "kind": "REWORK",
+        "_number": 1,
+        "created": "2018-09-20 11:39:01.000000000",
+        "uploader": {
+          "_account_id": 6816
+        },
+        "ref": "refs/changes/64/604064/1",
+        "fetch": {
+          "git": {
+            "url": "git://git.openstack.org/openstack/openstack-ansible-ops",
+            "ref": "refs/changes/64/604064/1"
+          },
+          "anonymous http": {
+            "url": "https://git.openstack.org/openstack/openstack-ansible-ops",
+            "ref": "refs/changes/64/604064/1"
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "openstack%2Fnetworking-calico~master~Id7d8fb5fb543b2516e432007c59cc2670db72d33",
+    "project": "openstack/networking-calico",
+    "branch": "master",
+    "topic": "auth-mitaka-compat",
+    "hashtags": [],
+    "change_id": "Id7d8fb5fb543b2516e432007c59cc2670db72d33",
+    "subject": "Make client auth setup compatible with mitaka and earlier",
+    "status": "NEW",
+    "created": "2018-09-25 13:54:49.000000000",
+    "updated": "2018-09-25 16:24:13.000000000",
+    "submit_type": "MERGE_IF_NECESSARY",
+    "mergeable": true,
+    "submittable": false,
+    "insertions": 49,
+    "deletions": 7,
+    "_number": 605080,
+    "owner": {
+      "_account_id": 13734
+    },
+    "messages": [
+      {
+        "id": "3f79a3b5_ca9309a4",
+        "author": {
+          "_account_id": 13734
+        },
+        "date": "2018-09-25 13:54:49.000000000",
+        "message": "Uploaded patch set 1.",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_9e4d4f3d",
+        "author": {
+          "_account_id": 22348
+        },
+        "date": "2018-09-25 16:24:13.000000000",
+        "message": "Patch Set 1: Verified-1\n\nBuild failed (check pipeline).  For information on how to proceed, see\nhttp://docs.openstack.org/infra/manual/developers.html#automated-testing\n\n\n- openstack-tox-pep8 http://logs.openstack.org/80/605080/1/check/openstack-tox-pep8/2239a9a/ : FAILURE in 5m 33s\n- openstack-tox-py27 http://logs.openstack.org/80/605080/1/check/openstack-tox-py27/9bfc613/ : FAILURE in 5m 50s\n- openstack-tox-py35 http://logs.openstack.org/80/605080/1/check/openstack-tox-py35/5af69fe/ : FAILURE in 5m 46s\n- networking-calico-tempest-dsvm http://logs.openstack.org/80/605080/1/check/networking-calico-tempest-dsvm/2f307bc/ : SUCCESS in 35m 19s",
+        "_revision_number": 1
+      }
+    ],
+    "current_revision": "795c4c1549c0b5f5218e2cb4bbddc00e6538edbb",
+    "revisions": {
+      "795c4c1549c0b5f5218e2cb4bbddc00e6538edbb": {
+        "kind": "REWORK",
+        "_number": 1,
+        "created": "2018-09-25 13:54:49.000000000",
+        "uploader": {
+          "_account_id": 13734
+        },
+        "ref": "refs/changes/80/605080/1",
+        "fetch": {
+          "git": {
+            "url": "git://git.openstack.org/openstack/networking-calico",
+            "ref": "refs/changes/80/605080/1"
+          },
+          "anonymous http": {
+            "url": "https://git.openstack.org/openstack/networking-calico",
+            "ref": "refs/changes/80/605080/1"
+          }
+        }
+      }
+    }
+  },
+  {
+    "id": "openstack%2Fcinder~stable%2Fpike~Id5dd71a785c4cd72ba44f9b4d26319be53079c39",
+    "project": "openstack/cinder",
+    "branch": "stable/pike",
+    "topic": "template_snapshot-stable/pike",
+    "hashtags": [],
+    "change_id": "Id5dd71a785c4cd72ba44f9b4d26319be53079c39",
+    "subject": "VMware: Use vSphere template as snapshot format",
+    "status": "MERGED",
+    "created": "2018-09-20 14:15:56.000000000",
+    "updated": "2018-09-25 16:24:13.000000000",
+    "submitted": "2018-09-21 15:50:45.000000000",
+    "submittable": false,
+    "insertions": 497,
+    "deletions": 76,
+    "_number": 604103,
+    "owner": {
+      "_account_id": 14892
+    },
+    "messages": [
+      {
+        "id": "3f79a3b5_0fd64428",
+        "author": {
+          "_account_id": 14892
+        },
+        "date": "2018-09-20 14:15:56.000000000",
+        "message": "Patch Set 1: Cherry Picked from branch master.",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_af9ab00f",
+        "author": {
+          "_account_id": 27615
+        },
+        "date": "2018-09-20 14:36:08.000000000",
+        "message": "Patch Set 1: Code-Review-1\n\nThis should be backported to Rocky and Queens first.",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_0fc164e4",
+        "author": {
+          "_account_id": 12822
+        },
+        "date": "2018-09-20 14:36:46.000000000",
+        "message": "Patch Set 1:\n\nBuild failed.  For information on how to proceed, see https://wiki.openstack.org/wiki/GerritJenkinsGit#Test_Failures\n\n- prophetstor-dsvm-tempest-cinder-ci http://download.prophetstor.com/prophetstor_ci/604103/1/check/prophetstor-dsvm-tempest-cinder-ci/12878 : FAILURE in 20m 18s\n\nFor information of ProphetStor CI, see https://wiki.openstack.org/wiki/ThirdPartySystems/ProphetStor_CI",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_ef4bc883",
+        "author": {
+          "_account_id": 14892
+        },
+        "date": "2018-09-20 14:39:24.000000000",
+        "message": "Patch Set 1:\n\nIt is already in Rocky\n\nhttps://github.com/openstack/cinder/commits/stable/rocky/cinder/volume/drivers/vmware/volumeops.py\n\nf36fc239804fb8fbf57d9df0320e2cb6d315ea10",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_af415065",
+        "author": {
+          "_account_id": 14892
+        },
+        "date": "2018-09-20 14:40:09.000000000",
+        "message": "Patch Set 1:\n\nhttps://review.openstack.org/#/c/501070/",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_caa35afe",
+        "author": {
+          "_account_id": 11904
+        },
+        "date": "2018-09-20 14:48:10.000000000",
+        "message": "Patch Set 1: Code-Review+2\n\nLooks good. First reaction was that this is an enhancement, but since this is enabling a core expected feature, this should be good to backport.",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_4add0a6b",
+        "author": {
+          "_account_id": 27615
+        },
+        "date": "2018-09-20 14:50:12.000000000",
+        "message": "Patch Set 1: -Code-Review",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_ca0d9ae7",
+        "author": {
+          "_account_id": 26537
+        },
+        "date": "2018-09-20 14:55:32.000000000",
+        "message": "Patch Set 1:\n\nFor rechecking only on the Cloudbase Cinder Windows CI, add a review comment with run-Cloudbase Cinder Windows CI\n\n- cinder-iscsi http://cloudbase-ci.com/cinder/604103/1/iscsi/ : FAILURE in 39m 00s\n- cinder-smb http://cloudbase-ci.com/cinder/604103/1/smb/ : FAILURE in 39m 07s",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_f0e1642c",
+        "author": {
+          "_account_id": 21863
+        },
+        "date": "2018-09-20 15:22:29.000000000",
+        "message": "Patch Set 1:\n\nBuild failed.  To recheck use \u0027run-INFINIDAT\u0027.  For 3rd party ci contact info: https://wiki.openstack.org/wiki/ThirdPartySystems\n\n- dsvm-tempest-infinibox-fc http://openstack-ci-logs.aws.infinidat.com/03/604103/1/check/dsvm-tempest-infinibox-fc/19c9b74 : SUCCESS in 1h 05m 53s\n- dsvm-tempest-infinibox-iscsi http://openstack-ci-logs.aws.infinidat.com/03/604103/1/check/dsvm-tempest-infinibox-iscsi/6fc70f7 : FAILURE in 40s",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_b0d1ac59",
+        "author": {
+          "_account_id": 28801
+        },
+        "date": "2018-09-20 15:22:46.000000000",
+        "message": "Patch Set 1:\n\nBuild succeeded.\n\n- dsvm-tempest-cisco-zonemanager-job http://173.39.89.136/logs/03/604103/1/check/dsvm-tempest-cisco-zonemanager-job/9021446/ : SUCCESS in 56m 54s",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_50c0587c",
+        "author": {
+          "_account_id": 10118
+        },
+        "date": "2018-09-20 15:23:27.000000000",
+        "message": "Patch Set 1:\n\nBuild failed. Test completed on IBM PowerKVM platform. For rechecking only on the IBM PowerKVM CI, add a review comment with pkvm: recheck. For contact and more information, see https://wiki.openstack.org/wiki/PowerKVM\n\n- tempest-dsvm-full-xenial https://dal05.objectstorage.softlayer.net/v1/AUTH_3d8e6ecb-f597-448c-8ec2-164e9f710dd6/pkvmci/cinder/03/604103/1/check/tempest-dsvm-full-xenial/cc34296/ : FAILURE in 1h 03m 52s\n- devstack-plugin-ceph-dsvm-xenial https://dal05.objectstorage.softlayer.net/v1/AUTH_3d8e6ecb-f597-448c-8ec2-164e9f710dd6/pkvmci/cinder/03/604103/1/check/devstack-plugin-ceph-dsvm-xenial/870050a/ : FAILURE in 1h 04m 50s (non-voting)",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_330da63d",
+        "author": {
+          "_account_id": 23613
+        },
+        "date": "2018-09-20 16:31:26.000000000",
+        "message": "Patch Set 1:\n\nBuild failed.  To recheck use \u0027run-NEC Cinder CI\u0027.  For 3rd party ci contact info: https://wiki.openstack.org/wiki/ThirdPartySystems\n\n- NEC-ISCSI http://FL9-119-243-99-132.tky.mesh.ad.jp/NEC-ISCSI/03/604103/1/check/NEC-ISCSI/f7f5d4a : FAILURE in 24m 55s\n- NEC-FC http://FL9-119-243-99-132.tky.mesh.ad.jp/NEC-FC/03/604103/1/check/NEC-FC/83f70d8 : FAILURE in 40m 54s",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_9620289c",
+        "author": {
+          "_account_id": 12369
+        },
+        "date": "2018-09-20 16:33:38.000000000",
+        "message": "Patch Set 1:\n\nBuild failed.  For information on how to proceed, see https://wiki.openstack.org/wiki/GerritJenkinsGit#Test_Failures\n\n- PureISCSIDriver-tempest-dsvm-xenial-aio-multipath-chap http://openstack-logs.purestorage.com/03/604103/1/check/PureISCSIDriver-tempest-dsvm-xenial-aio-multipath-chap/63e6431 : SUCCESS in 49m 42s\n- PureFCDriver-tempest-dsvm-xenial-aio-multipath http://openstack-logs.purestorage.com/03/604103/1/check/PureFCDriver-tempest-dsvm-xenial-aio-multipath/c09a9f1 : FAILURE in 2m 42s\n\nhttps://wiki.openstack.org/wiki/ThirdPartySystems/Pure_Storage_CI",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_563b70c6",
+        "author": {
+          "_account_id": 19933
+        },
+        "date": "2018-09-20 16:34:50.000000000",
+        "message": "Patch Set 1:\n\nBuild succeeded (check pipeline). Use run-ZadaraStorage VPSA CI to recheck. For information, see https://wiki.openstack.org/wiki/ThirdPartySystems/ZadaraStorage_VPSA_CI.\n\n- dsvm-tempest-zadara-driver http://openstack-ci-logs.zadarastorage.com/03/604103/1/check/dsvm-tempest-zadara-driver/b71c4b0 : SUCCESS in 1h 33m 47s (non-voting)",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_f6995c79",
+        "author": {
+          "_account_id": 18883
+        },
+        "date": "2018-09-20 16:55:34.000000000",
+        "message": "Patch Set 1:\n\nBuild failed (check pipeline).  For information on how to proceed, see http://docs.openstack.org/infra/manual/developers.html#automated-testing\n\n- xiv-tempest-dsvm-full-iscsi http://dal05.objectstorage.softlayer.net/v1/AUTH_0bd27569-6310-44fc-8a8d-36a112cac4ec/IBM-STORAGE-CI/xiv-tempest-dsvm-full-iscsi/11820 : FAILURE in 39m 05s\n- ds8k-tempest-dsvm-full-fc http://dal05.objectstorage.softlayer.net/v1/AUTH_0bd27569-6310-44fc-8a8d-36a112cac4ec/IBM-STORAGE-CI/ds8k-tempest-dsvm-full-fc/8215 : SUCCESS in 50m 53s\n- storwize-tempest-dsvm-full-iscsi http://dal05.objectstorage.softlayer.net/v1/AUTH_0bd27569-6310-44fc-8a8d-36a112cac4ec/IBM-STORAGE-CI/storwize-tempest-dsvm-full-iscsi/10002 : FAILURE in 35m 52s\n- storwize-tempest-dsvm-full-fc http://dal05.objectstorage.softlayer.net/v1/AUTH_0bd27569-6310-44fc-8a8d-36a112cac4ec/IBM-STORAGE-CI/storwize-tempest-dsvm-full-fc/8599 : FAILURE in 36m 07s\n- flashsystem-tempest-dsvm-full-iscsi http://dal05.objectstorage.softlayer.net/v1/AUTH_0bd27569-6310-44fc-8a8d-36a112cac4ec/IBM-STORAGE-CI/flashsystem-tempest-dsvm-full-iscsi/9569 : FAILURE in 1h 12m 01s\n- flashsystem-tempest-dsvm-full-fc http://dal05.objectstorage.softlayer.net/v1/AUTH_0bd27569-6310-44fc-8a8d-36a112cac4ec/IBM-STORAGE-CI/flashsystem-tempest-dsvm-full-fc/8254 : FAILURE in 23s\n- gpfs-cinder-tempest-dsvm-full-file http://dal05.objectstorage.softlayer.net/v1/AUTH_0bd27569-6310-44fc-8a8d-36a112cac4ec/IBM-STORAGE-CI/gpfs-cinder-tempest-dsvm-full-file/715 : FAILURE in 57m 45s",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_64acb634",
+        "author": {
+          "_account_id": 15670
+        },
+        "date": "2018-09-20 19:19:08.000000000",
+        "message": "Patch Set 1:\n\nBuild failed.  To recheck use \u0027run-storpoolci\u0027.  For 3rd party CI contact info: https://wiki.openstack.org/wiki/ThirdPartySystems/StorPool_CI\n\n- dsvm-tempest-storpool http://logs.ci-openstack.storpool.com/03/604103/1/check/dsvm-tempest-storpool/a1feaa5 : FAILURE in 11m 23s",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_5f0dc332",
+        "author": {
+          "_account_id": 22348
+        },
+        "date": "2018-09-20 19:30:04.000000000",
+        "message": "Patch Set 1: Verified+1\n\nBuild succeeded (check pipeline).\n\n- openstack-tox-pep8 http://logs.openstack.org/03/604103/1/check/openstack-tox-pep8/73c11d2/ : SUCCESS in 8m 15s\n- openstack-tox-py27 http://logs.openstack.org/03/604103/1/check/openstack-tox-py27/632fca3/ : SUCCESS in 8m 47s\n- openstack-tox-py35 http://logs.openstack.org/03/604103/1/check/openstack-tox-py35/6a5d8ad/ : SUCCESS in 8m 30s\n- build-openstack-sphinx-docs http://logs.openstack.org/03/604103/1/check/build-openstack-sphinx-docs/f2c47f6/html/ : SUCCESS in 17m 10s\n- legacy-tempest-dsvm-neutron-full http://logs.openstack.org/03/604103/1/check/legacy-tempest-dsvm-neutron-full/f5a06f7/ : SUCCESS in 1h 39m 34s\n- tempest-full http://logs.openstack.org/03/604103/1/check/tempest-full/1f88957/ : SUCCESS in 1h 51m 42s\n- neutron-grenade http://logs.openstack.org/03/604103/1/check/neutron-grenade/4c08d62/ : SUCCESS in 1h 00m 34s\n- build-openstack-releasenotes http://logs.openstack.org/03/604103/1/check/build-openstack-releasenotes/6665e32/html/ : SUCCESS in 12m 15s\n- openstack-tox-pylint http://logs.openstack.org/03/604103/1/check/openstack-tox-pylint/16a8743/ : SUCCESS in 14m 25s (non-voting)\n- legacy-tempest-dsvm-full-devstack-plugin-ceph http://logs.openstack.org/03/604103/1/check/legacy-tempest-dsvm-full-devstack-plugin-ceph/20a18f4/ : FAILURE in 1h 22m 34s (non-voting)\n- openstack-tox-functional http://logs.openstack.org/03/604103/1/check/openstack-tox-functional/db5ef95/ : SUCCESS in 4m 50s (non-voting)\n- legacy-grenade-dsvm-cinder-mn-sub-volbak http://logs.openstack.org/03/604103/1/check/legacy-grenade-dsvm-cinder-mn-sub-volbak/4056e75/ : SUCCESS in 57m 59s\n- legacy-tempest-dsvm-lvm-multibackend http://logs.openstack.org/03/604103/1/check/legacy-tempest-dsvm-lvm-multibackend/8a4010e/ : SUCCESS in 1h 32m 46s (non-voting)\n- legacy-tempest-dsvm-full-drbd-devstack http://logs.openstack.org/03/604103/1/check/legacy-tempest-dsvm-full-drbd-devstack/17538e3/ : SUCCESS in 1h 12m 43s (non-voting)\n- legacy-tempest-dsvm-full-devstack-plugin-nfs http://logs.openstack.org/03/604103/1/check/legacy-tempest-dsvm-full-devstack-plugin-nfs/f7c5986/ : SUCCESS in 1h 18m 02s (non-voting)\n- cinder-tempest-dsvm-lvm-lio http://logs.openstack.org/03/604103/1/check/cinder-tempest-dsvm-lvm-lio/7effac9/ : FAILURE in 1h 45m 05s (non-voting)\n- devstack-plugin-ceph-tempest http://logs.openstack.org/03/604103/1/check/devstack-plugin-ceph-tempest/9f4f324/ : SUCCESS in 1h 50m 43s (non-voting)",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_1f6d0b2e",
+        "author": {
+          "_account_id": 13144
+        },
+        "date": "2018-09-20 20:09:29.000000000",
+        "message": "Patch Set 1:\n\n* oracle-zfssa-dsvm-iscsi https://openstackci.oracle.com/zfssa_ci/refs-changes-03-604103-1-iscsi : SUCCESS",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_9f391bf2",
+        "author": {
+          "_account_id": 22510
+        },
+        "date": "2018-09-20 20:27:49.000000000",
+        "message": "Patch Set 1:\n\nBuild failed.  To recheck use \u0027run-Synology DSM CI\u0027.  For 3rd party ci contact info: https://wiki.openstack.org/wiki/ThirdPartySystems\n\n- synology-dsm-cinder-iscsi http://172.22.1.21/03/604103/1/check/synology-dsm-cinder-iscsi/75660bf : FAILURE in 4m 12s",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_bf197788",
+        "author": {
+          "_account_id": 25243
+        },
+        "date": "2018-09-20 20:29:01.000000000",
+        "message": "Patch Set 1:\n\nBuild succeeded.\n\n- cinder-cDOT-iSCSI http://logs.openstack.netapp.com/logs/03/604103/1/upstream-check/cinder-cDOT-iSCSI/7acd8a8/ : SUCCESS in 58m 24s\n- cinder-cDOT-NFS http://logs.openstack.netapp.com/logs/03/604103/1/upstream-check/cinder-cDOT-NFS/d32917b/ : SUCCESS in 29m 23s\n- cinder-cDOT-FCP http://logs.openstack.netapp.com/logs/03/604103/1/upstream-check/cinder-cDOT-FCP/045c759/ : SUCCESS in 50m 25s\n- cinder-7mode-iSCSI http://logs.openstack.netapp.com/logs/03/604103/1/upstream-check/cinder-7mode-iSCSI/c73c238/ : NOT_REGISTERED (non-voting)\n- cinder-7mode-NFS http://logs.openstack.netapp.com/logs/03/604103/1/upstream-check/cinder-7mode-NFS/598adc5/ : NOT_REGISTERED (non-voting)\n\nComment \u0027run-netapp-ci\u0027 or \u0027netapp-ci-recheck\u0027 to rerun these tests. https://wiki.openstack.org/wiki/ThirdPartySystems/NetApp_CI",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_ca2d9346",
+        "author": {
+          "_account_id": 26077
+        },
+        "date": "2018-09-20 20:52:40.000000000",
+        "message": "Patch Set 1:\n\nBuild succeeded.\n\n- cinder-solidfire-iSCSI http://logs.openstack.netapp.com/logs/03/604103/1/upstream-solidfire-check/cinder-solidfire-iSCSI/8130807/ : SUCCESS in 1h 21m 38s\n\nComment \u0027run-netapp-solidfire-ci\u0027 or \u0027netapp-solidfire-ci-recheck\u0027 or \u0027run solidfire\u0027 to rerun these tests. https://wiki.openstack.org/wiki/ThirdPartySystems/NetApp_SolidFire_CI",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_6acb1f49",
+        "author": {
+          "_account_id": 24230
+        },
+        "date": "2018-09-20 21:04:23.000000000",
+        "message": "Patch Set 1:\n\nBuild succeeded.\n\n- cinder-eseries-iSCSI http://logs.openstack.netapp.com/logs/03/604103/1/upstream-eseries-check/cinder-eseries-iSCSI/088af4e/ : SUCCESS in 1h 00m 41s (non-voting)\n- cinder-eseries-FCP http://logs.openstack.netapp.com/logs/03/604103/1/upstream-eseries-check/cinder-eseries-FCP/4e2837e/ : SUCCESS in 59m 52s (non-voting)\n\nComment \u0027run-netapp-eseries-ci\u0027 or \u0027netapp-eseries-ci-recheck\u0027 to rerun these tests. https://wiki.openstack.org/wiki/ThirdPartySystems/NetApp_Eseries_CI",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_f71153f9",
+        "author": {
+          "_account_id": 21976
+        },
+        "date": "2018-09-20 22:45:18.000000000",
+        "message": "Patch Set 1:\n\nBuild succeeded.\n\n- kaminario-dsvm-tempest-full-iscsi http://54.209.116.144/03/604103/1/check/kaminario-dsvm-tempest-full-iscsi/7fa5460 : SUCCESS in 1h 47m 24s\n- kaminario-dsvm-tempest-full-FC http://54.209.116.144/03/604103/1/check/kaminario-dsvm-tempest-full-FC/480ccca : SUCCESS in 1h 44m 50s",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_76a0daa5",
+        "author": {
+          "_account_id": 11611
+        },
+        "date": "2018-09-21 12:16:27.000000000",
+        "message": "Patch Set 1:\n\nBuild failed.  For information on how to proceed, see https://wiki.openstack.org/wiki/GerritJenkinsGit#Test_Failures. For 3rd party ci contact info: https://wiki.openstack.org/wiki/ThirdPartySystems/\n\n- nimble-iscsi-driver-dsvm-volume https://ftp.nimblestorage.com/openstack_ci/iscsi/03/604103/1/check/nimble-iscsi-driver-dsvm-volume/1099562 : FAILURE in 1h 37m 23s\n- nimble-fc-driver-dsvm-volume https://ftp.nimblestorage.com/openstack_ci/iscsi/03/604103/1/check/nimble-fc-driver-dsvm-volume/bca5a72 : FAILURE in 42m 40s",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_976250ac",
+        "author": {
+          "_account_id": 7198
+        },
+        "date": "2018-09-21 13:55:09.000000000",
+        "message": "Patch Set 1: Code-Review+2 Workflow+1\n\nLooks like a good cherry-pick.",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_17f3a0e8",
+        "author": {
+          "_account_id": 22348
+        },
+        "date": "2018-09-21 13:57:02.000000000",
+        "message": "Patch Set 1: -Verified\n\nStarting gate jobs.",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_22b1b901",
+        "author": {
+          "_account_id": 22348
+        },
+        "date": "2018-09-21 15:50:44.000000000",
+        "message": "Patch Set 1: Verified+2\n\nBuild succeeded (gate pipeline).\n\n- openstack-tox-pep8 http://logs.openstack.org/03/604103/1/gate/openstack-tox-pep8/77618ad/ : SUCCESS in 7m 41s\n- openstack-tox-py27 http://logs.openstack.org/03/604103/1/gate/openstack-tox-py27/06ec144/ : SUCCESS in 10m 21s\n- openstack-tox-py35 http://logs.openstack.org/03/604103/1/gate/openstack-tox-py35/2e9c46e/ : SUCCESS in 8m 20s\n- build-openstack-sphinx-docs http://logs.openstack.org/03/604103/1/gate/build-openstack-sphinx-docs/46482b9/html/ : SUCCESS in 16m 03s\n- legacy-tempest-dsvm-neutron-full http://logs.openstack.org/03/604103/1/gate/legacy-tempest-dsvm-neutron-full/9c0a8e6/ : SUCCESS in 1h 25m 34s\n- tempest-full http://logs.openstack.org/03/604103/1/gate/tempest-full/3bcb33f/ : SUCCESS in 1h 45m 50s\n- neutron-grenade http://logs.openstack.org/03/604103/1/gate/neutron-grenade/5c7a676/ : SUCCESS in 46m 42s\n- build-openstack-releasenotes http://logs.openstack.org/03/604103/1/gate/build-openstack-releasenotes/fff1655/html/ : SUCCESS in 16m 17s\n- legacy-grenade-dsvm-cinder-mn-sub-volbak http://logs.openstack.org/03/604103/1/gate/legacy-grenade-dsvm-cinder-mn-sub-volbak/e52afeb/ : SUCCESS in 1h 03m 21s",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_42b4f5f0",
+        "author": {
+          "_account_id": 22348
+        },
+        "date": "2018-09-21 15:50:45.000000000",
+        "message": "Change has been successfully merged by Zuul",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_3e5c3bef",
+        "author": {
+          "_account_id": 24236
+        },
+        "date": "2018-09-25 16:24:13.000000000",
+        "message": "Patch Set 1:\n\nBuild failed. For 3rd party CI contact info: https://wiki.openstack.org/wiki/ThirdPartySystems\n\n- cinder-test-iscsi http://218.29.111.78:9000/03/604103/1/check/cinder-test-iscsi/e0eeb5d : FAILURE in 1h 22m 17s\n- cinder-test-fc http://218.29.111.78:9000/03/604103/1/check/cinder-test-fc/d49d285 : FAILURE in 1h 03m 10s\n- Cinder-AS13000 http://218.29.111.78:9000/03/604103/1/check/Cinder-AS13000/22467cb : FAILURE in 1h 36m 54s",
+        "_revision_number": 1
+      }
+    ],
+    "current_revision": "a5e86c387e67650451d957c5ef525b452203c2fd",
+    "revisions": {
+      "a5e86c387e67650451d957c5ef525b452203c2fd": {
+        "kind": "REWORK",
+        "_number": 1,
+        "created": "2018-09-20 14:15:56.000000000",
+        "uploader": {
+          "_account_id": 14892
+        },
+        "ref": "refs/changes/03/604103/1",
+        "fetch": {
+          "git": {
+            "url": "git://git.openstack.org/openstack/cinder",
+            "ref": "refs/changes/03/604103/1"
+          },
+          "anonymous http": {
+            "url": "https://git.openstack.org/openstack/cinder",
+            "ref": "refs/changes/03/604103/1"
+          }
+        }
+      }
+    },
+    "_more_changes": true
+  }
+]
