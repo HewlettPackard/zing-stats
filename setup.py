@@ -38,7 +38,7 @@ setup(
     name='zingstats',  # Required
     use_scm_version=True,
     setup_requires=['setuptools_scm', 'pytest-runner'],
-    tests_require=['pytest'],
+    tests_require=['pytest', 'requests-mock'],
     description='A package for querying for change data from Gerrit and Github.',  # Required
     long_description=long_description,  # Optional
     #long_description_content_type='text/markdown',  # Optional (see note above)

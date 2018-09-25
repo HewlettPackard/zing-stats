@@ -67,7 +67,7 @@ class GerritChanges(Changes):
 
     def gather(self):
         log.info('Gathering changes from %s for projects: %s and branches: %s',
-                self.url,
+                 self.url,
                  ', '.join(sorted(self.projects)),
                  ', '.join(sorted(self.branches)))
 
@@ -78,7 +78,7 @@ class GerritChanges(Changes):
             payload = {
                 'q': self.query,
                 # TODO make ALL_FILES gathering toggleable, it is expensive/slow
-                #'o': ['ALL_REVISIONS', 'MESSAGES', 'ALL_FILES'],
+                # 'o': ['ALL_REVISIONS', 'MESSAGES', 'ALL_FILES'],
                 'o': ['ALL_REVISIONS', 'MESSAGES'],
                 'start': self.query_start,
                 'n': self.query_size}
@@ -96,12 +96,12 @@ class GerritChanges(Changes):
 
                 if self.projects and change.project not in self.projects:
                     log.debug('Change %s project %s not in projects, skipping',
-                             change.long_id, change.project)
+                              change.long_id, change.project)
                     continue
 
                 if self.branches and change.branch not in self.branches:
                     log.debug('Change %s branch %s not in branches, skipping',
-                             change.long_id, change.branch)
+                              change.long_id, change.branch)
                     continue
 
                 if change.long_id in self.changes:
@@ -130,8 +130,8 @@ class GerritChanges(Changes):
 
     @staticmethod
     def clean_gerrit_response(response):
-            """Strip magic junk off the start of the gerrit response."""
-            return json.loads(response.text[5:])
+        """Strip magic junk off the start of the gerrit response."""
+        return json.loads(response.text[5:])
 
 
 class Change(object):
@@ -211,7 +211,7 @@ class Revision(object):
 
     def files(self):
         for file_name in sorted(self._files):
-            yield file_name, self._files[file_name]['diff'],\
+            yield file_name, self._files[file_name]['diff'], \
                   self._files[file_name]['content']
 
     def add_message(self, message):
