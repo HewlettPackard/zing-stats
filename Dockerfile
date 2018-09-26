@@ -16,7 +16,6 @@
 # Needs to be connected to a web server container to report
 
 FROM python:2.7-slim as build
-#RUN "${VERSION:?Build argument needs to be set and non-empty.}"
 ARG VERSION
 RUN ["/bin/bash", "-c", ": ${VERSION:?Expected docker build --build-arg version=xxx ... }"]
 
