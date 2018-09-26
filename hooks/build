@@ -16,9 +16,8 @@
 #
 
 # docker automated builds sets a number of env vars including
-#  CACHE_TAG: the Docker repository tag being built.
+#  SOURCE_BRANCH: the name of the branch or the tag that is currently being tested.
 #  DOCKER_REPO: the name of the Docker repository being built.
 # https://docs.docker.com/docker-cloud/builds/advanced/#environment-variables-for-building-and-testing
 
-export VERSION=${CACHE_TAG:-latest}
-docker build --build-arg VERSION="$VERSION" -t "$DOCKER_REPO:$VERSION" .
+docker build --build-arg VERSION="$SOURCE_BRANCH" -t "$DOCKER_REPO:$SOURCE_BRANCH" -t "$DOCKER_REPO:latest" .
