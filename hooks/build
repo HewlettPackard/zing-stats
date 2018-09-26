@@ -20,4 +20,12 @@
 #  DOCKER_REPO: the name of the Docker repository being built.
 # https://docs.docker.com/docker-cloud/builds/advanced/#environment-variables-for-building-and-testing
 
-docker build --build-arg VERSION="$SOURCE_BRANCH" -t "$DOCKER_REPO:$SOURCE_BRANCH" -t "$DOCKER_REPO:latest" .
+# If we're building from a https://semver.org/ tag then use that for the
+# image version, otherwise use the branch name + the abbreviated git sha1
+if [[ $SOURCE_BRANCH =~ ^[0-9].[0-9].[0-9]$ ]]; then
+    VERSION="$SOURCE_BRANCH"
+else
+    VERSION="$SOURCE_BRANCH-${GIT_SHA1::8}"
+fi
+
+docker image build --build-arg VERSION="$SOURCE_BRANCH" -t "$DOCKER_REPO:$VERSION" -t "$DOCKER_REPO:latest" .
