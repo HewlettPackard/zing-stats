@@ -1,4 +1,4 @@
-# (c) Copyright 2017 Hewlett Packard Enterprise Development LP
+# (c) Copyright 2017,2018 Hewlett Packard Enterprise Development LP
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -15,29 +15,37 @@
 # Zing stats generator (output to /var/www/html)
 # Needs to be connected to a web server container to report
 
-FROM python:2.7-slim
-
-LABEL version="0.5.1"
-LABEL description="zing stats generator"
-LABEL maintainer "Stephen Mulcahy <stephen.mulcahy@hpe.com>"
-
-EXPOSE 80
+FROM python:2.7-slim as build
+#RUN "${VERSION:?Build argument needs to be set and non-empty.}"
+ARG VERSION
+RUN ["/bin/bash", "-c", ": ${VERSION:?Expected docker build --build-arg version=xxx ... }"]
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         coreutils \
         curl \
         busybox-static \
         git \
+        virtualenv \
     && rm -rf /var/lib/apt/lists/*
 
 # install zing-stats from git repo
-COPY zing_stats.py /usr/local/bin/zing_stats.py
-COPY zing_stats.html.j2 /usr/local/bin/zing_stats.html.j2
-COPY requirements.txt /
-RUN pip install --no-cache-dir -r /requirements.txt
+ADD . /build
+RUN pip install /build
 
-# configure and start cron to run zing-stats
+FROM python:2.7-slim as prod
+ARG VERSION
+LABEL version=$VERSION
+LABEL description="zing stats generator"
+LABEL maintainer "Stephen Mulcahy <stephen.mulcahy@hpe.com>"
+COPY --from=build /usr/local /usr/local
+COPY --from=build /build/crontab /crontab
+COPY --from=build /build/projects.json /projects.json
+EXPOSE 80
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        coreutils \
+        curl \
+        busybox-static \
+    && rm -rf /var/lib/apt/lists/*
 RUN mkdir -p /var/spool/cron/crontabs
-COPY crontab /root/crontab
-RUN /bin/busybox crontab -u root /root/crontab
+RUN /bin/busybox crontab -u root /crontab
 CMD ["/bin/busybox", "crond", "-f", "-L", "/dev/stdout"]

@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.org/HewlettPackard/zing-stats.svg?branch=master)](https://travis-ci.org/HewlettPackard/zing-stats)
 [![Docker Automated build](https://img.shields.io/docker/automated/zingstats/zing-stats.svg?maxAge=2592000?style=plastic)](https://hub.docker.com/r/zingstats/zing-stats/)
 
-&copy; Copyright 2017 Hewlett Packard Enterprise Development LP
+&copy; Copyright 2017,2018 Hewlett Packard Enterprise Development LP
 
 # zing-stats
 
@@ -32,6 +32,7 @@ Example output of detailed stats section
 ![Screenshot #4](docs/screenshots/detailed_stats.png "Screenshot - example output of detailed stats section")
 
 ## Installation
+
 ### Using virtualenv
 
 ```
@@ -39,12 +40,12 @@ git clone <url to zing-stats repo>
 sudo apt install virtualenv
 virtualenv ~/venv/zing-stats
 . ~/venv/zing-stats/bin/activate
-pip install -r requirements.txt
+python setup.py install
 ```
 
 ## Running
 
-### Running as script
+### Running as a script
 
 ```
 ./zing_stats.py --gerrit-url <gerrit url> --github-url <github enterprise url> --github-token <github token> -o <output directory>
@@ -52,17 +53,28 @@ pip install -r requirements.txt
 
 The team names used in zing-stats reports are read from projects.json
 
-### Running from docker hub
+### Running as a docker container
+
+#### Build container
+
+This will build zingstats/zing-stats:latest and zingstats/zing-stats:<version> where version is derived from the git tag e.g. 0.5.2-1-ga49b866
+
+```
+export VERSION=$(git describe --tags); docker build --build-arg VERSION=$VERSION --build-arg http_proxy=$http_proxy --build-arg https_proxy=$https_proxy -t zingstats/zing-stats:$VERSION -t zingstats/zing-stats:latest .
+```
+
+#### Run container
+
 (assumes projects.json is in your pwd, adjust the -v as neccesary if not)
 
 ```
-docker run -v $(pwd)/projects.json:/projects.json -e GERRIT_URL=<gerrit url> -e GITHUB_URL=<github enterprise url> -e GITHUB_TOKEN=<github token> zingstats/zing-stats
+docker run -v $(pwd)/projects.json:/projects.json -e GERRIT_URL=<gerrit url> -e GITHUB_URL=<github enterprise url> -e GITHUB_TOKEN=<github token> zingstats/zing-stats:<version>
 ```
 
 e.g.
 
 ```
-docker run -v $(pwd)/projects.json:/projects.json -e gerrit_host=https://review.openstack.org/ -e github_host=https://github.com/ zingstats/zing-stats
+docker run -v $(pwd)/projects.json:/projects.json -e gerrit_host=https://review.openstack.org/ -e github_host=https://github.com/ zingstats/zing-stats:latest
 ```
 
 ### Running in docker compose

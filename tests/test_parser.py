@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 #
-# (c) Copyright 2017 Hewlett Packard Enterprise Development LP
+# (c) Copyright 2017,2018 Hewlett Packard Enterprise Development LP
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,15 +14,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-import zing_stats
 
-
-def test_helloworld():
-        assert 1 == 1
+from zingstats.parser import parse_ci_job_comments, parse_pr_message
+from zingstats import GerritMessage
 
 
 def test_parse_gerrit_change_message():
-    messages = [
+    msgs = [
         {
             '_revision_number': 1,
             'author': {
@@ -51,22 +49,28 @@ def test_parse_gerrit_change_message():
             'message': 'Patch Set 1: Verified+1\n\nBuild succeeded\n\n- https://zing.example.net/jenkins/job/test-check/6/ : SUCCESS in 7s'  # noqa
         },
     ]
-    msg0 = zing_stats.parse_ci_job_comments(messages[0])
-    assert msg0 == {}
-    msg1 = zing_stats.parse_ci_job_comments(messages[1])
-    assert msg1 == {}
-    msg2 = zing_stats.parse_ci_job_comments(messages[2])
-    assert msg2['num'] == '1'
-    assert msg2['status'] == 'succeeded'
-    assert msg2['v_score'] == '+1'
 
-    assert len(msg2['jobs']) == 1
-    assert msg2['jobs'][0]['name'] == 'test-check'
-    assert msg2['jobs'][0]['non_voting'] is None
+    msg = GerritMessage(msgs[0]['id'], msgs[0]['date'], msgs[0]['message'])
+    ci_run = parse_ci_job_comments(msg)
+    assert ci_run == {}
+
+    msg = GerritMessage(msgs[1]['id'], msgs[1]['date'], msgs[1]['message'])
+    ci_run = parse_ci_job_comments(msg)
+    assert ci_run == {}
+
+    msg = GerritMessage(msgs[2]['id'], msgs[2]['date'], msgs[2]['message'])
+    ci_run = parse_ci_job_comments(msg)
+    assert ci_run['num'] == '1'
+    assert ci_run['status'] == 'succeeded'
+    assert ci_run['v_score'] == '+1'
+
+    assert len(ci_run['jobs']) == 1
+    assert ci_run['jobs'][0]['name'] == 'test-check'
+    assert ci_run['jobs'][0]['non_voting'] is None
 
 
 def test_parse_github_change_message():
-    messages = [
+    msgs = [
         {
             "body": "@aaaa @bbbb @ccccc xxxxxxxx",
             "created_at": "2017-12-06T10:49:06Z",
@@ -124,16 +128,16 @@ def test_parse_github_change_message():
             }
         },
     ]
-    msg0 = zing_stats.parse_pr_message(messages[0])
-    assert msg0 == {}
-    msg1 = zing_stats.parse_pr_message(messages[1])
-    assert msg1['num'] == None
-    assert msg1['status'] == 'succeeded'
-    assert msg1['v_score'] == None
-    assert len(msg1['jobs']) == 3
-    assert msg1['jobs'][0]['name'] == 'foo-example-check'
-    assert msg1['jobs'][0]['non_voting'] is None
-    assert msg1['jobs'][1]['name'] == 'foo-sec-scan'
-    assert msg1['jobs'][1]['non_voting'] == ' (non-voting)'
-    assert msg1['jobs'][2]['name'] == 'another-scan'
-    assert msg1['jobs'][2]['non_voting'] == ' (non-voting)'
+    ci_run = parse_pr_message(msgs[0])
+    assert ci_run == {}
+    ci_run = parse_pr_message(msgs[1])
+    assert ci_run['num'] == None
+    assert ci_run['status'] == 'succeeded'
+    assert ci_run['v_score'] == None
+    assert len(ci_run['jobs']) == 3
+    assert ci_run['jobs'][0]['name'] == 'foo-example-check'
+    assert ci_run['jobs'][0]['non_voting'] is None
+    assert ci_run['jobs'][1]['name'] == 'foo-sec-scan'
+    assert ci_run['jobs'][1]['non_voting'] == ' (non-voting)'
+    assert ci_run['jobs'][2]['name'] == 'another-scan'
+    assert ci_run['jobs'][2]['non_voting'] == ' (non-voting)'
