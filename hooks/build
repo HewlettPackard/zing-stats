@@ -28,4 +28,4 @@ else
     VERSION="$SOURCE_BRANCH-${GIT_SHA1::8}"
 fi
 
-docker image build --build-arg VERSION="$SOURCE_BRANCH" --tag "$DOCKER_REPO:$VERSION"
+docker image build --build-arg VERSION="$VERSION" --tag "$DOCKER_REPO:$VERSION"
