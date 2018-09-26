@@ -177,6 +177,7 @@ class GerritChange(Change):
         self.url = '%s/changes/%s' % (parent_url, self.long_id)
         self.review_url = '%s/%s' % (parent_url, self.number)
 
+        # TODO move to utility function (for ease of testing and general use)
         for revision_id in change['revisions']:
             revision = GerritRevision(revision_id,
                                       change['revisions'][revision_id],
@@ -185,6 +186,7 @@ class GerritChange(Change):
                                       self.session)
             self._revisions[int(revision.number)] = revision
 
+        # TODO move to utility function (for ease of testing and general use)
         for message_json in change['messages']:
             message = GerritMessage(message_json['id'],
                                     message_json['date'],
