@@ -103,3 +103,15 @@ def __parse_change_messages(message, ci_run_patt):
                                 % ci_job_match.group('the_rest'))
             run['jobs'].append(job)
     return run
+
+
+def parse_promotion_success(msg):
+    promotion_success_patt = '(Patch Set \d+:\n\n)?Promotion review .+ has brought into alpha channel' # noqa
+    promotion_success_re = re.compile(promotion_success_patt)
+    return promotion_success_re.match(msg)
+
+
+def parse_promotion_failure(msg):
+    promotion_failure_patt = '(Patch Set \d+:\n\n)?PROMOTION FAILURE\n\nPromotion of artifacts from this change into Alpha channel has failed' # noqa
+    promotion_failure_re = re.compile(promotion_failure_patt)
+    return promotion_failure_re.match(msg)
