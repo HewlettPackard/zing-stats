@@ -10,4 +10,4 @@ install: "python setup.py install"
 script: "python setup.py test"
 
 after_success:
-    - codecov
+    - bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
