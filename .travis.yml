@@ -10,7 +10,7 @@ install:
 # command to run tests
 script:
     - python setup.py test
-    - pip install coverage codecov
+    - pip install --user coverage codecov
 
 after_success:
     - codecov
