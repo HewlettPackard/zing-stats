@@ -10,7 +10,7 @@ install:
 # command to run tests
 script:
     - python setup.py test
-    - pip install codecov
+    - pip install coverage
 
 after_success:
-    - codecov
+    - bash <(curl -s https://codecov.io/bash)
