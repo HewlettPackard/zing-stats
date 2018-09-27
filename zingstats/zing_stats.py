@@ -32,22 +32,23 @@ Terminology:
 from __future__ import division
 
 import argparse
-from collections import defaultdict
-from datetime import datetime
-from datetime import timedelta
-import jinja2
 import json
 import logging
 import os
+import re
+import sys
+from collections import defaultdict
+from datetime import datetime
+from datetime import timedelta
+
+import jinja2
 import pandas as pd
 import plotly
-from plotly import graph_objs as go
-import re
 import requests
-import sys
+from plotly import graph_objs as go
 
+import zingstats.parser
 from zingstats import GerritChanges
-from zingstats.parser import parse_ci_job_comments, parse_pr_message
 
 CI_FAILURE_STATUSES = ['failed']
 CI_SUCCESS_STATUSES = ['succeeded', 'successful', 'ok']
@@ -430,18 +431,6 @@ def get_changes_by_project(changes):
     return changes_by_project
 
 
-def parse_promotion_success(msg):
-    promotion_success_patt = '(Patch Set \d+:\n\n)?Promotion review .+ has brought into alpha channel' # noqa
-    promotion_success_re = re.compile(promotion_success_patt)
-    return promotion_success_re.match(msg)
-
-
-def parse_promotion_failure(msg):
-    promotion_failure_patt = '(Patch Set \d+:\n\n)?PROMOTION FAILURE\n\nPromotion of artifacts from this change into Alpha channel has failed' # noqa
-    promotion_failure_re = re.compile(promotion_failure_patt)
-    return promotion_failure_re.match(msg)
-
-
 def parse_change_stats(args, changes, start_dt, ts_format, change_parser):
     """
     Returns a pandas DataFrame with
@@ -638,18 +627,18 @@ def parse_ci_stats(changes, start_dt):
                 # TODO refactor for injection of custom parsing in a generic way
                 # e.g. using some kind of plugins structure, promotions may be very
                 # specific to some systems (as are the promotion messages)
-                promotion_succeeded = parse_promotion_success(message.text)
+                promotion_succeeded = zingstats.parser.parse_promotion_success(message.text)
                 if promotion_succeeded and message.message_dt > start_dt:
                     log.debug('%s %s (%s): promotion succeeded', change.project,
                               change.number, message.message_dt)
                     promotion_success[message.message_dt] += 1
-                promotion_failed = parse_promotion_failure(message.text)
+                promotion_failed = zingstats.parser.parse_promotion_failure(message.text)
                 if promotion_failed and message.message_dt > start_dt:
                     log.debug('%s %s (%s): promotion failed', change.project,
                               change.number, message.message_dt)
                     promotion_failure[message.message_dt] += 1
 
-                ci_run = parse_ci_job_comments(message)
+                ci_run = zingstats.parser.parse_ci_job_comments(message)
                 log.debug('ci_run: %s', ci_run)
                 if ci_run:
                     # ignore messages on changes that are older than our start time
@@ -771,7 +760,7 @@ def parse_pr_ci_stats(prs, start_dt):
                           comment_dt)
                 promotion_failure[comment_ts] += 1
 
-            ci_run = parse_pr_message(comment)
+            ci_run = zingstats.parser.parse_pr_message(comment)
             log.debug('ci_run: %s', ci_run)
             if ci_run:
                 log.debug(ci_run)

@@ -15,7 +15,7 @@
 # limitations under the License.
 #
 
-from zingstats.parser import parse_ci_job_comments, parse_pr_message
+import zingstats.parser
 from zingstats import GerritMessage
 
 
@@ -51,15 +51,15 @@ def test_parse_gerrit_change_message():
     ]
 
     msg = GerritMessage(msgs[0]['id'], msgs[0]['date'], msgs[0]['message'])
-    ci_run = parse_ci_job_comments(msg)
+    ci_run = zingstats.parser.parse_ci_job_comments(msg)
     assert ci_run == {}
 
     msg = GerritMessage(msgs[1]['id'], msgs[1]['date'], msgs[1]['message'])
-    ci_run = parse_ci_job_comments(msg)
+    ci_run = zingstats.parser.parse_ci_job_comments(msg)
     assert ci_run == {}
 
     msg = GerritMessage(msgs[2]['id'], msgs[2]['date'], msgs[2]['message'])
-    ci_run = parse_ci_job_comments(msg)
+    ci_run = zingstats.parser.parse_ci_job_comments(msg)
     assert ci_run['num'] == '1'
     assert ci_run['status'] == 'succeeded'
     assert ci_run['v_score'] == '+1'
@@ -128,12 +128,12 @@ def test_parse_github_change_message():
             }
         },
     ]
-    ci_run = parse_pr_message(msgs[0])
+    ci_run = zingstats.parser.parse_pr_message(msgs[0])
     assert ci_run == {}
-    ci_run = parse_pr_message(msgs[1])
-    assert ci_run['num'] == None
+    ci_run = zingstats.parser.parse_pr_message(msgs[1])
+    assert ci_run['num'] is None
     assert ci_run['status'] == 'succeeded'
-    assert ci_run['v_score'] == None
+    assert ci_run['v_score'] is None
     assert len(ci_run['jobs']) == 3
     assert ci_run['jobs'][0]['name'] == 'foo-example-check'
     assert ci_run['jobs'][0]['non_voting'] is None
@@ -141,3 +141,25 @@ def test_parse_github_change_message():
     assert ci_run['jobs'][1]['non_voting'] == ' (non-voting)'
     assert ci_run['jobs'][2]['name'] == 'another-scan'
     assert ci_run['jobs'][2]['non_voting'] == ' (non-voting)'
+
+
+def test_parse_promotion_success():
+    msg_pass = 'Patch Set 1:\n\nPromotion review https://review.example.net/1234 has brought into alpha channel following artifacts that contain code from this change:\n - Docker image foo/blah'  # noqa
+    msg_fail = 'test test test'
+
+    promotion_success = zingstats.parser.parse_promotion_success(msg_pass)
+    assert promotion_success is not None
+
+    promotion_success = zingstats.parser.parse_promotion_success(msg_fail)
+    assert promotion_success is None
+
+
+def test_parse_promotion_failure():
+    msg_pass = 'Patch Set 1:\n\nPROMOTION FAILURE\n\nPromotion of artifacts from this change into Alpha channel has failed and will require action to resolve.\n\nPromotion Review: https://review.example.net/1234'  # noqa
+    msg_fail = 'test test test'
+
+    promotion_success = zingstats.parser.parse_promotion_failure(msg_pass)
+    assert promotion_success is not None
+
+    promotion_success = zingstats.parser.parse_promotion_failure(msg_fail)
+    assert promotion_success is None
