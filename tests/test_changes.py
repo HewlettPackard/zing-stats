@@ -34,7 +34,7 @@ class TestClass(object):
         query = 'status:open OR status:closed'
         projects = ['foo/blah']
         branches = ['master']
-        finish_dt = datetime.now()
+        finish_dt = datetime(2018, 9, 26, 10, 0, 0)
         start_dt = finish_dt - timedelta(hours=24)
 
         requests_mock.get('http://gerrit.example.com/', text='data')
@@ -107,7 +107,7 @@ class TestClass(object):
         projects = ['openstack/cinder', 'openstack/openstack-ansible-ops',
                     'openstack/networking-calico']
         branches = ['stable/pike', 'master']
-        finish_dt = datetime.now()
+        finish_dt = datetime(2018, 9, 26, 10, 0, 0)
         start_dt = finish_dt - timedelta(hours=24)
         # TODO move data loading out of test case
         # TODO sanitise test file
