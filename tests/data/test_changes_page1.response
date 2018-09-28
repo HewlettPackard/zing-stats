@@ -1,0 +1,76 @@
+)]}'
+[
+  {
+    "id": "openstack%2Fopenstack-ansible-ops~master~I2790b6d848a2960d89f122b0f5bb1cf714c68809",
+    "project": "openstack/openstack-ansible-ops",
+    "branch": "master",
+    "topic": "consistent-defaults",
+    "hashtags": [],
+    "change_id": "I2790b6d848a2960d89f122b0f5bb1cf714c68809",
+    "subject": "MNAIO: Correct README regarding DATA_DISK_DEVICE",
+    "status": "NEW",
+    "created": "2018-09-20 11:39:01.000000000",
+    "updated": "2018-09-25 16:24:41.000000000",
+    "submit_type": "MERGE_IF_NECESSARY",
+    "mergeable": true,
+    "submittable": false,
+    "insertions": 13,
+    "deletions": 6,
+    "_number": 604064,
+    "owner": {
+      "_account_id": 6816
+    },
+    "messages": [
+      {
+        "id": "3f79a3b5_1b652a45",
+        "author": {
+          "_account_id": 6816
+        },
+        "date": "2018-09-20 11:39:01.000000000",
+        "message": "Uploaded patch set 1.",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_b0276cb6",
+        "author": {
+          "_account_id": 22348
+        },
+        "date": "2018-09-20 15:17:08.000000000",
+        "message": "Patch Set 1: Verified+1\n\nBuild succeeded (check pipeline).\n\n- build-openstack-sphinx-docs http://logs.openstack.org/64/604064/1/check/build-openstack-sphinx-docs/2ebf4b5/html/ : SUCCESS in 2m 58s\n- openstack-ansible-linters http://logs.openstack.org/64/604064/1/check/openstack-ansible-linters/e4ec765/ : SUCCESS in 6m 03s\n- openstack-tox-docs http://logs.openstack.org/64/604064/1/check/openstack-tox-docs/b3fb4e2/html/ : SUCCESS in 3m 21s",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_fe5563c3",
+        "author": {
+          "_account_id": 6816
+        },
+        "date": "2018-09-25 16:24:41.000000000",
+        "message": "Patch Set 1: Code-Review+2 Workflow+1",
+        "_revision_number": 1
+      }
+    ],
+    "current_revision": "af73200d70fbc4084d881f2d2e883d28143060a3",
+    "revisions": {
+      "af73200d70fbc4084d881f2d2e883d28143060a3": {
+        "kind": "REWORK",
+        "_number": 1,
+        "created": "2018-09-20 11:39:01.000000000",
+        "uploader": {
+          "_account_id": 6816
+        },
+        "ref": "refs/changes/64/604064/1",
+        "fetch": {
+          "git": {
+            "url": "git://git.openstack.org/openstack/openstack-ansible-ops",
+            "ref": "refs/changes/64/604064/1"
+          },
+          "anonymous http": {
+            "url": "https://git.openstack.org/openstack/openstack-ansible-ops",
+            "ref": "refs/changes/64/604064/1"
+          }
+        }
+      }
+    },
+    "_more_changes": true
+  }
+]

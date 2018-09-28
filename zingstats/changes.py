@@ -126,7 +126,7 @@ class GerritChanges(Changes):
 
             self.query_start += self.query_size
 
-            return True
+        return True
 
     @staticmethod
     def clean_gerrit_response(response):

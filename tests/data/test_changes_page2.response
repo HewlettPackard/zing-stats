@@ -1,0 +1,67 @@
+)]}'
+[
+  {
+    "id": "openstack%2Fnetworking-calico~master~Id7d8fb5fb543b2516e432007c59cc2670db72d33",
+    "project": "openstack/networking-calico",
+    "branch": "master",
+    "topic": "auth-mitaka-compat",
+    "hashtags": [],
+    "change_id": "Id7d8fb5fb543b2516e432007c59cc2670db72d33",
+    "subject": "Make client auth setup compatible with mitaka and earlier",
+    "status": "NEW",
+    "created": "2018-09-25 13:54:49.000000000",
+    "updated": "2018-09-25 16:24:13.000000000",
+    "submit_type": "MERGE_IF_NECESSARY",
+    "mergeable": true,
+    "submittable": false,
+    "insertions": 49,
+    "deletions": 7,
+    "_number": 605080,
+    "owner": {
+      "_account_id": 13734
+    },
+    "messages": [
+      {
+        "id": "3f79a3b5_ca9309a4",
+        "author": {
+          "_account_id": 13734
+        },
+        "date": "2018-09-25 13:54:49.000000000",
+        "message": "Uploaded patch set 1.",
+        "_revision_number": 1
+      },
+      {
+        "id": "3f79a3b5_9e4d4f3d",
+        "author": {
+          "_account_id": 22348
+        },
+        "date": "2018-09-25 16:24:13.000000000",
+        "message": "Patch Set 1: Verified-1\n\nBuild failed (check pipeline).  For information on how to proceed, see\nhttp://docs.openstack.org/infra/manual/developers.html#automated-testing\n\n\n- openstack-tox-pep8 http://logs.openstack.org/80/605080/1/check/openstack-tox-pep8/2239a9a/ : FAILURE in 5m 33s\n- openstack-tox-py27 http://logs.openstack.org/80/605080/1/check/openstack-tox-py27/9bfc613/ : FAILURE in 5m 50s\n- openstack-tox-py35 http://logs.openstack.org/80/605080/1/check/openstack-tox-py35/5af69fe/ : FAILURE in 5m 46s\n- networking-calico-tempest-dsvm http://logs.openstack.org/80/605080/1/check/networking-calico-tempest-dsvm/2f307bc/ : SUCCESS in 35m 19s",
+        "_revision_number": 1
+      }
+    ],
+    "current_revision": "795c4c1549c0b5f5218e2cb4bbddc00e6538edbb",
+    "revisions": {
+      "795c4c1549c0b5f5218e2cb4bbddc00e6538edbb": {
+        "kind": "REWORK",
+        "_number": 1,
+        "created": "2018-09-25 13:54:49.000000000",
+        "uploader": {
+          "_account_id": 13734
+        },
+        "ref": "refs/changes/80/605080/1",
+        "fetch": {
+          "git": {
+            "url": "git://git.openstack.org/openstack/networking-calico",
+            "ref": "refs/changes/80/605080/1"
+          },
+          "anonymous http": {
+            "url": "https://git.openstack.org/openstack/networking-calico",
+            "ref": "refs/changes/80/605080/1"
+          }
+        }
+      }
+    },
+    "_more_changes": true
+  }
+]
