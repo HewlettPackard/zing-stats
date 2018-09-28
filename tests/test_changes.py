@@ -113,9 +113,9 @@ class TestClass(object):
         # TODO move data loading out of test case
         # TODO sanitise test file
         session = requests.Session()
-        test_data = TestClass.load_test_changes_data(
-            TestClass.CHANGES_DATA_FILE)
-        requests_mock.get(TestClass.MOCKED_CHANGES_URL, text=test_data)
+        test_data = self.__class__.load_test_changes_data(
+            self.__class__.CHANGES_DATA_FILE)
+        requests_mock.get(self.__class__.MOCKED_CHANGES_URL, text=test_data)
         changes = GerritChanges(url, query, projects, branches,
                                 start_dt, finish_dt, session)
         return changes
@@ -131,24 +131,23 @@ class TestClass(object):
         branches = ['stable/pike', 'master']
         finish_dt = datetime(2018, 9, 26, 10, 0, 0)
         start_dt = finish_dt - timedelta(hours=24)
-        # TODO move data loading out of test case
-        # TODO sanitise test file
+
         session = requests.Session()
 
-        CHANGES_DATA_FILE1 = 'test_changes_page1.response'
-        MOCKED_CHANGES_URL1 = 'https://review.openstack.org/changes/?q=status%3Aopen+OR+status%3Aclosed&start=0&o=ALL_REVISIONS&o=MESSAGES&n=1'  # noqa
-        test_data1 = self.__class__.load_test_changes_data(CHANGES_DATA_FILE1)
-        requests_mock.get(MOCKED_CHANGES_URL1, text=test_data1)
+        test_data_page1 = 'test_changes_page1.response'
+        mocked_url_1 = 'https://review.openstack.org/changes/?q=status%3Aopen+OR+status%3Aclosed&start=0&o=ALL_REVISIONS&o=MESSAGES&n=1'  # noqa
+        test_data1 = self.__class__.load_test_changes_data(test_data_page1)
+        requests_mock.get(mocked_url_1, text=test_data1)
 
-        CHANGES_DATA_FILE2 = 'test_changes_page2.response'
-        MOCKED_CHANGES_URL2 = 'https://review.openstack.org/changes/?q=status%3Aopen+OR+status%3Aclosed&start=1&o=ALL_REVISIONS&o=MESSAGES&n=1'  # noqa
-        test_data2 = self.__class__.load_test_changes_data(CHANGES_DATA_FILE2)
-        requests_mock.get(MOCKED_CHANGES_URL2, text=test_data2)
+        test_data_page2 = 'test_changes_page2.response'
+        mocked_url_2 = 'https://review.openstack.org/changes/?q=status%3Aopen+OR+status%3Aclosed&start=1&o=ALL_REVISIONS&o=MESSAGES&n=1'  # noqa
+        test_data2 = self.__class__.load_test_changes_data(test_data_page2)
+        requests_mock.get(mocked_url_2, text=test_data2)
 
-        CHANGES_DATA_FILE3 = 'test_changes_page3.response'
-        MOCKED_CHANGES_URL3 = 'https://review.openstack.org/changes/?q=status%3Aopen+OR+status%3Aclosed&start=2&o=ALL_REVISIONS&o=MESSAGES&n=1'  # noqa
-        test_data3 = self.__class__.load_test_changes_data(CHANGES_DATA_FILE3)
-        requests_mock.get(MOCKED_CHANGES_URL3, text=test_data3)
+        test_data_page3 = 'test_changes_page3.response'
+        mocked_url_3 = 'https://review.openstack.org/changes/?q=status%3Aopen+OR+status%3Aclosed&start=2&o=ALL_REVISIONS&o=MESSAGES&n=1'  # noqa
+        test_data3 = self.__class__.load_test_changes_data(test_data_page3)
+        requests_mock.get(mocked_url_3, text=test_data3)
 
         changes = GerritChanges(url, query, projects, branches,
                                 start_dt, finish_dt, session, query_size=1)
