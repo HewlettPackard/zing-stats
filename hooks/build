@@ -25,7 +25,8 @@
 if [[ $SOURCE_BRANCH =~ ^[0-9].[0-9].[0-9]$ ]]; then
     VERSION="$SOURCE_BRANCH"
 else
-    VERSION="$SOURCE_BRANCH-${GIT_SHA1::8}"
+    git fetch --unshallow origin
+    VERSION=$(git describe --tags)
 fi
 
 docker image build --build-arg VERSION="$VERSION" --tag "$DOCKER_REPO:$VERSION" .
