@@ -38,10 +38,9 @@ setup(
     name='zingstats',  # Required
     use_scm_version=True,
     setup_requires=['setuptools_scm', 'pytest-runner'],
-    tests_require=['pytest', 'pytest-cov', 'requests-mock'],
-    description='A package for querying for change data from Gerrit and Github.',  # Required
+    tests_require=['pytest', 'pytest-cov', 'requests-mock', 'pytest-flake8'],
+    description='A package for querying change data from Gerrit and Github.',
     long_description=long_description,  # Optional
-    #long_description_content_type='text/markdown',  # Optional (see note above)
     url='https://github.com/HewlettPackard/zing-stats',  # Optional
     author='Stephen Mulcahy',  # Optional
     author_email='stephen.mulcahy@hpe.com',  # Optional
@@ -69,7 +68,7 @@ setup(
         'Programming Language :: Python :: 2.7',
     ],
 
-    #keywords='sample setuptools development',  # Optional
+    # keywords='sample setuptools development',  # Optional
 
     # You can just specify package directories manually here if your project is
     # simple. Or you can use find_packages().
@@ -88,7 +87,7 @@ setup(
     #
     # For an analysis of "install_requires" vs pip's requirements files see:
     # https://packaging.python.org/en/latest/requirements.html
-    install_requires=['requests', 'PyYAML', 'jinja2', 'pandas', 'plotly<3'],  # Optional
+    install_requires=['requests', 'PyYAML', 'jinja2', 'pandas', 'plotly<3'],
 
     # List additional groups of dependencies here (e.g. development
     # dependencies). Users will be able to install these using the "extras"
@@ -98,10 +97,10 @@ setup(
     #
     # Similar to `install_requires` above, these must be valid existing
     # projects.
-    #extras_require={  # Optional
+    # extras_require={  # Optional
     #    'dev': ['check-manifest'],
     #    'test': ['coverage'],
-    #},
+    # },
 
     package_data={
         'zingstats': ['zing_stats.html.j2'],

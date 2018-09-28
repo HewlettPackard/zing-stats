@@ -77,7 +77,7 @@ class GerritChanges(Changes):
                       self.query_start)
             payload = {
                 'q': self.query,
-                # TODO make ALL_FILES gathering toggleable, it is expensive/slow
+                # TODO make ALL_FILES gathering toggleable, it is expensive
                 # 'o': ['ALL_REVISIONS', 'MESSAGES', 'ALL_FILES'],
                 'o': ['ALL_REVISIONS', 'MESSAGES'],
                 'start': self.query_start,
@@ -107,7 +107,7 @@ class GerritChanges(Changes):
                 if change.long_id in self.changes:
                     log.warn('Change id %s already stored, not storing again',
                              change.long_id)
-                    log.warn('the cause of this duplicate must be investigated')
+                    log.warn('cause of this duplicate must be investigated')
                     continue
 
                 if self.max_changes and len(self.changes) >= self.max_changes:
@@ -117,7 +117,7 @@ class GerritChanges(Changes):
                     break
 
                 if change.updated_dt < self.start_dt:
-                    log.debug('%s is older than %s start, not reading any more',
+                    log.debug('%s is older than %s start, not reading more',
                               change.updated_dt, self.start_dt)
                     results[-1].pop('_more_changes', None)
                     break
@@ -213,8 +213,8 @@ class Revision(object):
 
     def files(self):
         for file_name in sorted(self._files):
-            yield file_name, self._files[file_name]['diff'], \
-                  self._files[file_name]['content']
+            yield (file_name, self._files[file_name]['diff'],
+                   self._files[file_name]['content'])
 
     def add_message(self, message):
         self._messages.append(message)

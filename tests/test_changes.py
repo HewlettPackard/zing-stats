@@ -13,6 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# flake8: noqa
 
 import logging
 import os.path
@@ -21,7 +22,7 @@ from datetime import timedelta
 
 import requests
 
-from zingstats import GerritChanges
+from zingstats.changes import GerritChanges
 
 
 # TODO look at betamax for managing test inputs

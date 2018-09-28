@@ -28,7 +28,7 @@ Terminology:
 
 """
 # TODO remove duplication in parsing
-# TODO add in generic check for CI (allowing user to specify list of files to check for)
+# TODO add in generic check for CI (user to specify list of files to check for)
 from __future__ import division
 
 import argparse
@@ -36,7 +36,7 @@ import json
 import logging
 import os
 import re
-import sys
+
 from collections import defaultdict
 from datetime import datetime
 from datetime import timedelta
@@ -48,14 +48,12 @@ import requests
 from plotly import graph_objs as go
 
 import zingstats.parser
-from zingstats import GerritChanges
+import zingstats.util
+import zingstats.changes
+
 
 CI_FAILURE_STATUSES = ['failed']
 CI_SUCCESS_STATUSES = ['succeeded', 'successful', 'ok']
-
-# need to drop last few digits to make microseconds from nanoseconds
-# e.g. datetime.strptime(change['created'][:-3], GERRIT_TIMESTAMP)
-GERRIT_TIMESTAMP = '%Y-%m-%d %H:%M:%S.%f'
 
 GITHUB_TIMESTAMP = '%Y-%m-%dT%H:%M:%SZ'
 
@@ -80,10 +78,10 @@ def main():
                "./zing_stats.py -r 168 -c > changes.json\n"
                "# analyse stats previously gathered in changes.json\n"
                "./zing_stats.py -r 168 -j changes.json\n"
-               "# analyse a set of gerrit and github projects with github auth\n"
-               "./zing_stats.py --github-host https://github.example.com --github-user username --github-token 3ec57a --gerrit-host https://gerrit.example.com --projects projects.json\n"
-               "# analyse a set of projects with specified branches (master and devel only)\n"
-               "./zing_stats.py --github-host https://github.example.com --gerrit-host https://gerrit.example.com --projects projects.json --branch master --branch devel\n",
+               "# analyse a set of gerrit and github projects with github auth\n"  # noqa
+               "./zing_stats.py --github-host https://github.example.com --github-user username --github-token 3ec57a --gerrit-host https://gerrit.example.com --projects projects.json\n"  # noqa
+               "# analyse a set of projects with specified branches (master and devel only)\n"  # noqa
+               "./zing_stats.py --github-host https://github.example.com --gerrit-host https://gerrit.example.com --projects projects.json --branch master --branch devel\n",  # noqa
         formatter_class=argparse.RawDescriptionHelpFormatter)
     script_name = __file__
     parser.set_defaults(
@@ -181,12 +179,13 @@ def main():
                         help='Recommended maximum duration for a CI job in '
                              'minutes (def: %(default)s).')
     args = parser.parse_args()
-    configure_logging(args)
+
+    zingstats.util.configure_logging(args)
     log.debug("Called with args: %s", args)
 
     if args.branches:
         log.info('Reporting only on changes to these branches: %s',
-                ','.join(args.branches))
+                 ','.join(args.branches))
 
     # enable logging multiple columns in output
     pd.set_option('display.width', 1000)
@@ -204,11 +203,15 @@ def main():
     session = requests.Session()
     session.verify = args.verify_https_requests
     if len(gerrit_projects) > 0:
-        gerrit_changes = GerritChanges(args.gerrit_url, gerrit_query,
-                                        gerrit_projects, args.branches,
-                                        start_dt, finish_dt,
-                                        session,
-                                        args.gerrit_query_size, args.gerrit_max_changes)
+        gerrit_changes = zingstats.changes.GerritChanges(args.gerrit_url,
+                                                         gerrit_query,
+                                                         gerrit_projects,
+                                                         args.branches,
+                                                         start_dt,
+                                                         finish_dt,
+                                                         session,
+                                                         args.gerrit_query_size,  # noqa
+                                                         args.gerrit_max_changes)  # noqa
         if gerrit_changes.gather():
             log.info('Gathered %d total changes', len(gerrit_changes))
         else:
@@ -218,16 +221,16 @@ def main():
         gerrit_changes = list()
 
     if len(projects.get('github')) > 0:
-        github_pr_count, github_prs, not_found_proj = gather_github_prs(args,
-                                                                        start_dt,
-                                                                        projects)
+        github_pr_count, github_prs, not_found_proj = \
+            gather_github_prs(args, start_dt, projects)
     else:
         github_pr_count = 0
         github_prs = list()
         not_found_proj = list()
 
     change_count = len(gerrit_changes) + github_pr_count
-    df = generate_dataframes(args, get_changes_by_project(gerrit_changes), github_prs, start_dt)
+    df = generate_dataframes(args, get_changes_by_project(gerrit_changes),
+                             github_prs, start_dt)
 
     if args.report_format == 'html':
         write_html(args, df, change_count, start_dt, finish_dt, projects,
@@ -254,13 +257,14 @@ def generate_dataframes(args, changes, prs, start_dt):
     df = dict()
     for project in sorted(changes):
         df_change_stats = parse_change_stats(args, changes[project], start_dt,
-                                            GERRIT_TIMESTAMP, parse_change)
+                                             zingstats.changes.GerritChange.GERRIT_FORMAT,  # noqa
+                                             parse_change)
         df_ci_stats = parse_ci_stats(changes[project], start_dt)
         project_dataframe(df, df_change_stats, df_ci_stats, project)
 
     for project in sorted(prs):
         df_change_stats = parse_change_stats(args, prs[project], start_dt,
-                                            GITHUB_TIMESTAMP, parse_pr)
+                                             GITHUB_TIMESTAMP, parse_pr)
         df_ci_stats = parse_pr_ci_stats(prs[project], start_dt)
         project_dataframe(df, df_change_stats, df_ci_stats, project)
 
@@ -273,7 +277,7 @@ def project_dataframe(df, df_change_stats, df_ci_stats, project):
             'Already processed %s, is the same project in gerrit and github?',
             project)
         exit(1)
-    df[project] = pd.concat([df_change_stats, df_ci_stats], sort=True)
+    df[project] = pd.concat([df_change_stats, df_ci_stats])
     df[project].index = pd.to_datetime(df[project].index)
     df[project].sort_index(inplace=True)
     df[project].fillna(value=0, inplace=True)
@@ -372,7 +376,7 @@ def gather_github_prs(args, oldest_timestamp, projects):
                 if args.github_token:
                     log.error('Skipping %s (404 while listing PRs, the '
                               '--github-token specified '
-                              'doesn\'t have access to this project)', project)
+                              'does not have access to this project)', project)
                 else:
                     log.error('Skipping %s (404 while listing PRs, try '
                               'providing a --github-token '
@@ -477,8 +481,9 @@ def parse_change_stats(args, changes, start_dt, ts_format, change_parser):
     return df
 
 
-def parse_change(args, change_id, changes, created, lifespan_sec, merged, recheck,
-                 reverify, revisions, start_dt, ts_format, updated, session):
+def parse_change(args, change_id, changes, created, lifespan_sec, merged,
+                 recheck, reverify, revisions, start_dt, ts_format, updated,
+                 session):
     change = changes[change_id]
     msg = 'project|change: %s|%s' % (change.project, change.number)
     if change.created_dt >= start_dt:
@@ -493,21 +498,25 @@ def parse_change(args, change_id, changes, created, lifespan_sec, merged, rechec
         revisions[change.merged_dt] = change.rev_count()
         lifespan = (change.merged_dt - change.created_dt).total_seconds()
         lifespan_sec[change.merged_dt] = lifespan
-        log.debug('age set to %d s for %s', lifespan_sec[change.merged_dt], msg)
+        log.debug('age set to %d s for %s', lifespan_sec[change.merged_dt],
+                  msg)
 
         for revision in change.revisions():
             for message in revision.messages():
-                msg = 'project|change|rev: %s|%s|%s' % (change.project, change.number, revision.number)
-            if 'recheck' in message.text.lower():
-                recheck[change.merged_dt] += 1
-                log.debug('recheck set to %d for %s', recheck[change.merged_dt], msg)
-            elif 'reverify' in message.text.lower():
-                reverify[change.merged_dt] += 1
-                log.debug('reverify set to %d for %s', reverify[change.merged_dt], msg)
+                msg = 'project|change|rev: %s|%s|%s' %\
+                      (change.project, change.number, revision.number)
+                if 'recheck' in message.text.lower():
+                    recheck[change.merged_dt] += 1
+                    log.debug('recheck set to %d for %s',
+                              recheck[change.merged_dt], msg)
+                elif 'reverify' in message.text.lower():
+                    reverify[change.merged_dt] += 1
+                    log.debug('reverify set to %d for %s',
+                              reverify[change.merged_dt], msg)
 
 
-def parse_pr(args, pr_id, prs, created, lifespan_sec, merged, recheck, reverify,
-             revisions, start_dt, ts_format, updated, session):
+def parse_pr(args, pr_id, prs, created, lifespan_sec, merged, recheck,
+             reverify, revisions, start_dt, ts_format, updated, session):
     pr = prs[pr_id]
     created_ts = pr['created_at']
     created_dt = datetime.strptime(created_ts, ts_format)
@@ -588,21 +597,6 @@ def github_query(args, query_url, session):
     return response.json()
 
 
-def get_merged_timestamp(change):
-    """
-    Projects renamed in gerrit seem to lose their 'submitted' timestamp,
-    handle that gracefully by returning the 'updated' timestamp instead in
-    those cases, emitting a warning.
-    """
-    merged_ts = change.get('submitted', None)
-    if not merged_ts:
-        log.debug('Warning - merged change %s is missing the submitted'
-                  ' timestamp, using updated timestamp instead',
-                  change['id'])
-        merged_ts = change['updated']
-    return merged_ts
-
-
 def parse_ci_stats(changes, start_dt):
     """
     Returns a pandas DataFrame with
@@ -624,15 +618,18 @@ def parse_ci_stats(changes, start_dt):
             for message in revision.messages():
                 log.debug('message: %s', message.text)
 
-                # TODO refactor for injection of custom parsing in a generic way
-                # e.g. using some kind of plugins structure, promotions may be very
+                # TODO refactor injection of custom parsing in a generic way
+                # e.g. using a plugins structure, promotions may be very
                 # specific to some systems (as are the promotion messages)
-                promotion_succeeded = zingstats.parser.parse_promotion_success(message.text)
+                promotion_succeeded = \
+                    zingstats.parser.parse_promotion_success(message.text)
                 if promotion_succeeded and message.message_dt > start_dt:
-                    log.debug('%s %s (%s): promotion succeeded', change.project,
-                              change.number, message.message_dt)
+                    log.debug('%s %s (%s): promotion succeeded',
+                              change.project, change.number,
+                              message.message_dt)
                     promotion_success[message.message_dt] += 1
-                promotion_failed = zingstats.parser.parse_promotion_failure(message.text)
+                promotion_failed = \
+                    zingstats.parser.parse_promotion_failure(message.text)
                 if promotion_failed and message.message_dt > start_dt:
                     log.debug('%s %s (%s): promotion failed', change.project,
                               change.number, message.message_dt)
@@ -641,7 +638,7 @@ def parse_ci_stats(changes, start_dt):
                 ci_run = zingstats.parser.parse_ci_job_comments(message)
                 log.debug('ci_run: %s', ci_run)
                 if ci_run:
-                    # ignore messages on changes that are older than our start time
+                    # ignore messages on changes that are older than start time
                     if message.message_dt < start_dt:
                         log.debug('discarding message on proj|change|rev|run: '
                                   '%s|%s|%s|%s with date %s',
@@ -655,40 +652,43 @@ def parse_ci_stats(changes, start_dt):
                     status = re.sub(r'\W+', '', ci_run['status'].lower())
                     if status in CI_SUCCESS_STATUSES:
                         ci_success[change.updated_dt] += 1
-                        log.debug(debug_msg_gerrit('ci_success',
-                                                   ci_success[change.updated_dt],
-                                                   'run',
-                                                   change,
-                                                   revision,
-                                                   ci_run['num'],
-                                                   'status: ' + ci_run['status']))
+                        log.debug(
+                            debug_msg_gerrit('ci_success',
+                                             ci_success[change.updated_dt],
+                                             'run',
+                                             change,
+                                             revision,
+                                             ci_run['num'],
+                                             'status: ' + ci_run['status']))
                     elif status in CI_FAILURE_STATUSES:
                         ci_failure[change.updated_dt] += 1
-                        log.debug(debug_msg_gerrit('ci_failure',
-                                                   ci_failure[change.updated_dt],
-                                                   'run',
-                                                   change,
-                                                   revision,
-                                                   ci_run['num'],
-                                                   'status: ' + ci_run['status']))
+                        log.debug(
+                            debug_msg_gerrit('ci_failure',
+                                             ci_failure[change.updated_dt],
+                                             'run',
+                                             change,
+                                             revision,
+                                             ci_run['num'],
+                                             'status: ' + ci_run['status']))
                     else:
                         # TODO add extra status to appropriate path above
                         log.warn('Unexpected status %s for %s on %s, skipping',
-                                 ci_run['status'], ci_run['num'], change.change_id)
+                                 ci_run['status'], ci_run['num'],
+                                 change.change_id)
                         continue
 
                     if change.status == 'MERGED':
                         for ci_job in ci_run['jobs']:
                             ci_total_time_sec[change.merged_dt] += ci_job[
                                 'total_sec']
-                            log.debug(debug_msg_gerrit('ci_total_time_sec',
-                                                       ci_total_time_sec[change.merged_dt],
-                                                       'job',
-                                                       change,
-                                                       revision,
-                                                       ci_job['name'],
-                                                       str(ci_job[
-                                                               'total_sec']) + 's'))
+                            log.debug(
+                                debug_msg_gerrit('ci_total_time_sec',
+                                                 ci_total_time_sec[change.merged_dt],  # noqa
+                                                 'job',
+                                                 change,
+                                                 revision,
+                                                 ci_job['name'],
+                                                 str(ci_job['total_sec']) + 's'))  # noqa
 
                             # this could end up being the longest job across
                             # multiple changes if two changes merge at the same
@@ -699,14 +699,14 @@ def parse_ci_stats(changes, start_dt):
                                     ci_longest_time_sec[change.merged_dt]):
                                 ci_longest_time_sec[change.merged_dt] = ci_job[
                                     'total_sec']
-                                log.debug(debug_msg_gerrit('ci_longest_time_sec',
-                                                           ci_longest_time_sec[change.merged_dt],
-                                                           'job',
-                                                           change,
-                                                           revision,
-                                                           ci_job['name'],
-                                                           str(ci_job[
-                                                                   'total_sec']) + 's'))
+                                log.debug(
+                                    debug_msg_gerrit('ci_longest_time_sec',
+                                                     ci_longest_time_sec[change.merged_dt],  # noqa
+                                                     'job',
+                                                     change,
+                                                     revision,
+                                                     ci_job['name'],
+                                                     str(ci_job['total_sec']) + 's'))  # noqa
 
     d = {'ci_total_time_sec': ci_total_time_sec,
          'ci_longest_time_sec': ci_longest_time_sec,
@@ -747,13 +747,15 @@ def parse_pr_ci_stats(prs, start_dt):
             # TODO refactor for injection of custom parsing in a generic way
             # e.g. using some kind of plugins structure, promotions may be very
             # specific to some systems (as are the promotion messages)
-            promotion_succeeded = parse_promotion_success(comment['body'])
+            promotion_succeeded = \
+                zingstats.parser.parse_promotion_success(comment['body'])
             if promotion_succeeded and comment_dt > start_dt:
                 log.debug('%s %s (%s): promotion success',
                           pr['base']['repo']['full_name'], pr['number'],
                           comment_dt)
                 promotion_success[comment_ts] += 1
-            promotion_failed = parse_promotion_failure(comment['body'])
+            promotion_failed = \
+                zingstats.parser.parse_promotion_failure(comment['body'])
             if promotion_failed and comment_dt > start_dt:
                 log.debug('%s %s (%s): promotion failure',
                           pr['base']['repo']['full_name'], pr['number'],
@@ -783,22 +785,16 @@ def parse_pr_ci_stats(prs, start_dt):
                 status = re.sub(r'\W+', '', ci_run['status'].lower())
                 if status in CI_SUCCESS_STATUSES:
                     ci_success[updated_ts] += 1
-                    log.debug(debug_msg_github('ci_success',
-                                        ci_success[updated_ts],
-                                        'run',
-                                        pr,
-                                        comment,
-                                        None,
-                                        'status: ' + ci_run['status']))
+                    log.debug(
+                        debug_msg_github('ci_success', ci_success[updated_ts],
+                                         'run', pr, comment, None,
+                                         'status: ' + ci_run['status']))
                 elif status in CI_FAILURE_STATUSES:
                     ci_failure[updated_ts] += 1
-                    log.debug(debug_msg_github('ci_failure',
-                                        ci_failure[updated_ts],
-                                        'run',
-                                        pr,
-                                        comment,
-                                        None,
-                                        'status: ' + ci_run['status']))
+                    log.debug(
+                        debug_msg_github('ci_failure', ci_failure[updated_ts],
+                                         'run', pr, comment, None,
+                                         'status: ' + ci_run['status']))
                 else:
                     # TODO add extra status to appropriate path above
                     log.warn('Unexpected status %s for %s on %s, skipping',
@@ -811,13 +807,12 @@ def parse_pr_ci_stats(prs, start_dt):
                     for ci_job in ci_run['jobs']:
                         ci_total_time_sec[merged_ts] += ci_job[
                             'total_sec']
-                        log.debug(debug_msg_github('ci_total_time_sec',
-                                            ci_total_time_sec[merged_ts],
-                                            'job',
-                                            pr,
-                                            comment,
-                                            ci_job['name'],
-                                            str(ci_job['total_sec']) + 's'))
+                        log.debug(
+                            debug_msg_github('ci_total_time_sec',
+                                             ci_total_time_sec[merged_ts],
+                                             'job', pr, comment,
+                                             ci_job['name'],
+                                             str(ci_job['total_sec']) + 's'))  # noqa
 
                         # this could end up being the longest job across
                         # multiple changes if two changes merge at the same
@@ -828,15 +823,12 @@ def parse_pr_ci_stats(prs, start_dt):
                                 ci_longest_time_sec[merged_ts]):
                             ci_longest_time_sec[merged_ts] = ci_job[
                                 'total_sec']
-                            log.debug(debug_msg_github('ci_longest_time_sec',
-                                                ci_longest_time_sec[
-                                                    merged_ts],
-                                                'job',
-                                                pr,
-                                                comment,
-                                                ci_job['name'],
-                                                str(ci_job[
-                                                        'total_sec']) + 's'))
+                            log.debug(
+                                debug_msg_github('ci_longest_time_sec',
+                                                 ci_longest_time_sec[merged_ts],  # noqa
+                                                 'job', pr, comment,
+                                                 ci_job['name'],
+                                                 str(ci_job['total_sec']) + 's'))  # noqa
 
     d = {'ci_total_time_sec': ci_total_time_sec,
          'ci_longest_time_sec': ci_longest_time_sec,
@@ -852,9 +844,10 @@ def parse_pr_ci_stats(prs, start_dt):
     return df
 
 
-def debug_msg_gerrit(field, counter, job_or_run, change, revision, name, value):
+def debug_msg_gerrit(field, counter, job_or_run, change, revision, name,
+                     value):
     return debug_msg(field, counter, job_or_run, change.project,
-                     change.number,revision.number, name, value)
+                     change.number, revision.number, name, value)
 
 
 def debug_msg_github(field, counter, job_or_run, pr, comment,
@@ -1154,51 +1147,6 @@ def generate_json(df_changes_by_project):
                       sort_keys=True,
                       indent=4,
                       separators=(',', ': ')))
-
-
-def configure_logging(args):
-    """Configure logging.
-
-    - Default => INFO
-    - log_quietly (-q) => ERROR
-    - log_verbosely (-v) => DEBUG
-    """
-
-    # requests and urllib3 are very chatty by default, suppress some of this
-    logging.getLogger("urllib3").setLevel(logging.WARNING)
-    logging.getLogger("requests").setLevel(logging.WARNING)
-
-    # and suppress InsecurePlatformWarning from urllib3 also
-    # see http://stackoverflow.com/questions/29099404 for details
-    import requests.packages.urllib3
-    requests.packages.urllib3.disable_warnings()
-
-    # Set root logger level to DEBUG, and use the
-    # handler level to control verbosity.
-    logging.getLogger().setLevel(logging.DEBUG)
-
-    ch = logging.StreamHandler(stream=sys.stderr)
-    ch.setLevel(logging.INFO)
-    if args.log_quietly:
-        ch.setLevel(logging.ERROR)
-    elif args.log_verbosely:
-        ch.setLevel(logging.DEBUG)
-
-    ch_format = logging.Formatter('%(message)s')
-    ch.setFormatter(ch_format)
-    logging.getLogger().addHandler(ch)
-
-    if args.logfile:
-        fh = logging.FileHandler(args.logfile, delay=True)
-        fh.setLevel(logging.INFO)
-        if args.log_trace:
-            fh.setLevel(logging.DEBUG)
-        log_format = (
-            '%(asctime)s: %(process)d:%(thread)d %(levelname)s - %(message)s'
-        )
-        fh_format = logging.Formatter(log_format)
-        fh.setFormatter(fh_format)
-        logging.getLogger().addHandler(fh)
 
 
 if __name__ == "__main__":
