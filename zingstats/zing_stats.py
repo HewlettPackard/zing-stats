@@ -51,7 +51,6 @@ import zingstats.parser
 import zingstats.util
 import zingstats.changes
 
-
 CI_FAILURE_STATUSES = ['failed']
 CI_SUCCESS_STATUSES = ['succeeded', 'successful', 'ok']
 
