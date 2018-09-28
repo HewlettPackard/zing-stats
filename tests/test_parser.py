@@ -14,9 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+# flake8: noqa
 
 import zingstats.parser
-from zingstats import GerritMessage
+from zingstats.changes import GerritMessage
 
 
 def test_parse_gerrit_change_message():

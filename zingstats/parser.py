@@ -63,12 +63,12 @@ def __parse_change_messages(message, ci_run_patt):
     if ci_run_match:
         try:
             run['num'] = ci_run_match.group('num')
-        except IndexError as e:
+        except IndexError:
             run['num'] = None
 
         try:
             run['v_score'] = ci_run_match.group('v_score')
-        except IndexError as e:
+        except IndexError:
             run['v_score'] = None
 
         run['status'] = ci_run_match.group('status')
