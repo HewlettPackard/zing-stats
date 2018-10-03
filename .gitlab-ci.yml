@@ -32,10 +32,8 @@ code_quality:
         --volume "$PWD":/code
         --volume /var/run/docker.sock:/var/run/docker.sock
         "registry.gitlab.com/gitlab-org/security-products/codequality:$SP_VERSION" /code
-    - pip install json json2html
-    - cat codeclimate.json | python -c 'import json; import json2html; import sys; print json2html.json2html.convert(json=json.load(sys.stdin))' > codeclimate.html
   artifacts:
-    paths: [codeclimate.json, codeclimate.html]
+    paths: [gl-code-quality-report.json]
   
 release:
   stage: release
@@ -48,7 +46,7 @@ release:
     IMAGE_TAG: $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME
   script:
   - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
-  - docker build -t $IMAGE_TAG .
+  - docker build --build-arg VERSION=$CI_COMMIT_REF_NAME -t $IMAGE_TAG .
   - docker push $IMAGE_TAG
 
 container_scanning:
@@ -67,7 +65,7 @@ container_scanning:
     - docker run -d --name db arminc/clair-db:latest
     - docker run -p 6060:6060 --link db:postgres -d --name clair --restart on-failure arminc/clair-local-scan:v2.0.1
     - apk add -U wget ca-certificates
-    - docker build -t ${CI_APPLICATION_REPOSITORY}:${CI_APPLICATION_TAG} .
+    - docker build --build-arg VERSION=${CI_APPLICATION_TAG} -t ${CI_APPLICATION_REPOSITORY}:${CI_APPLICATION_TAG} .
     - wget https://github.com/arminc/clair-scanner/releases/download/v8/clair-scanner_linux_amd64
     - mv clair-scanner_linux_amd64 clair-scanner
     - chmod +x clair-scanner
