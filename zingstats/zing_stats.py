@@ -46,6 +46,7 @@ import pandas as pd
 import plotly
 import requests
 from plotly import graph_objs as go
+import urllib
 
 import zingstats.parser
 import zingstats.util
@@ -331,7 +332,7 @@ def write_html(args, df, num_changes, start_dt, finish_dt, projects,
         if team == 'All':
             file_name = 'index.html'
         else:
-            file_name = '%s.html' % re.sub(r'\W+', '_', team.lower())
+            file_name = '%s.html' % urllib.quote_plus(team.lower())
         file_path = os.path.join(dir_path, file_name)
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
@@ -930,9 +931,13 @@ def generate_html(args, df, num_changes, start_dt, finish_dt,
     df_plot.fillna(value=0, inplace=True)
     log.debug('df plot= %s', df_plot)
 
+    # add a custom filter to jinja for url encoding
+    environment = jinja2.Environment()
+    environment.filters['quote_plus'] = lambda u: urllib.quote_plus(u)
+
     with open(args.html_template, 'r') as f:
         html_template = f.read()
-    template = jinja2.Template(html_template)
+    template = environment.from_string(html_template)
     if args.range_hours <= 24:
         title_units = '%d hours' % args.range_hours
     else:
