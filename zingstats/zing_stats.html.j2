@@ -101,7 +101,7 @@ widgets: ['zebra']
                         {% if group == current_group %}
                             {% set is_active = 'class="active"' %}
                         {% endif %}
-                        <li role="presentation" {{ is_active }}><a href="{{ url|replace(" ", "_") }}.html">{{ group }}</a></li>
+                        <li role="presentation" {{ is_active }}><a href="{{ url|quote_plus }}.html">{{ group }}</a></li>
                     {% endfor %}
                 </ul>
             </div>
