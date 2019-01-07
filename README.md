@@ -3,7 +3,7 @@
 [![codecov](https://codecov.io/gh/HewlettPackard/zing-stats/branch/master/graph/badge.svg)](https://codecov.io/gh/HewlettPackard/zing-stats)
 [![Maintainability](https://api.codeclimate.com/v1/badges/44b88c848f141122961a/maintainability)](https://codeclimate.com/github/HewlettPackard/zing-stats/maintainability)
 
-&copy; Copyright 2017,2018 Hewlett Packard Enterprise Development LP
+&copy; Copyright 2017-2019 Hewlett Packard Enterprise Development LP
 
 # zing-stats
 
