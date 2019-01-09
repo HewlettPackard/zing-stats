@@ -22,20 +22,25 @@
         <link rel="stylesheet" href="https://cdn.rawgit.com/Mottie/tablesorter/v2.29.6/dist/css/theme.blue.min.css">
         <script src="https://cdn.rawgit.com/Mottie/tablesorter/v2.29.6/dist/js/jquery.tablesorter.min.js"></script> 
         <script src="https://cdn.rawgit.com/Mottie/tablesorter/v2.29.6/dist/js/jquery.tablesorter.widgets.min.js"></script> 
-<script>
-	$(function(){
-	  $("table").tablesorter({
-theme: 'blue',
-widgets: ['zebra']
-});
-	});
-	</script>
+        <script>
+            $(function(){
+                $("table").tablesorter({
+                    theme: 'blue',
+                    widgets: ['zebra']
+                });
+            });
+	    </script>
 
         <!-- plot.ly js -->
         <script src="https://cdn.plot.ly/plotly-1.25.2.min.js"></script>
 
 
         <style>
+            .container-fluid {
+                margin-left: 5%;
+                margin-right: 5%;
+            }
+
             .cr {
               width: 200px;
               padding: 16px;
@@ -87,7 +92,7 @@ widgets: ['zebra']
         <div class="cr cr-top cr-right cr-sticky cr-orange">
             Beta
         </div>
-        <div class="container">
+        <div class="container-fluid">
             <div class="row">
                 <div class="page-header">
                     <h1> {{ title }} </h1>
@@ -139,6 +144,8 @@ widgets: ['zebra']
                             <th>Change/PR lifespan (mean)</th>
                             <th>Recheck count (mean)</th>
                             <th>Reverify count (mean)</th>
+                            <th>Recheck count</th>
+                            <th>Reverify count</th>
                         </tr>
                         </thead>
                         <tbody class="avoid-sort">
@@ -194,6 +201,8 @@ widgets: ['zebra']
                             {% else %}
                                 <th>0.0</th>
                             {% endif %}
+                            <th>{{ '%0.0f' % df['total']['recheck'].sum() }}</th>
+                            <th>{{ '%0.0f' % df['total']['reverify'].sum() }}</th>
                         </tr>
 			        </tbody>
 			        <tbody>
@@ -250,6 +259,8 @@ widgets: ['zebra']
                                 {% else %}
                                     <td>0.0</td>
                                 {% endif %}
+                                <td>{{ '%0.0f' % df[project]['recheck'].sum() }}</td>
+                                <td>{{ '%0.0f' % df[project]['reverify'].sum() }}</td>
                             </tr>
                         {% endfor %}
 			            </tbody>
