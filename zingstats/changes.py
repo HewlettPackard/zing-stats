@@ -66,10 +66,15 @@ class GerritChanges(Changes):
         self.max_changes = max_changes
 
     def gather(self):
+        if self.branches:
+            branch_list = ', '.join(sorted(self.branches))
+        else:
+            branch_list = 'all'
+
         log.info('Gathering changes from %s for projects: %s and branches: %s',
                  self.url,
                  ', '.join(sorted(self.projects)),
-                 ', '.join(sorted(self.branches)))
+                 branch_list)
 
         results = [{'_more_changes': True}]
         while results[-1].get('_more_changes'):
@@ -122,6 +127,7 @@ class GerritChanges(Changes):
                     results[-1].pop('_more_changes', None)
                     break
 
+                log.debug('Adding change %s (project: %s, branch: %s', change.long_id, change.project, change.branch)
                 self.add(change)
 
             self.query_start += self.query_size
