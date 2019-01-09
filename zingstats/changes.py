@@ -128,7 +128,7 @@ class GerritChanges(Changes):
                     break
 
                 log.debug('Adding change %s (project: %s, branch: %s',
-                        change.long_id, change.project, change.branch)
+                          change.long_id, change.project, change.branch)
                 self.add(change)
 
             self.query_start += self.query_size
