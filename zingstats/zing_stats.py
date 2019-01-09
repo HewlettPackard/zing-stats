@@ -88,9 +88,11 @@ def main():
         script_dir=os.path.abspath((os.path.dirname(script_name)))
     )
     parser.add_argument('-b', '--branch', dest='branches',
+                        default=os.getenv('BRANCHES', '').split(),
                         action='append',
                         help='Restrict reporting to specified branches ('
-                             'defaulting to all branches).')
+                             'defaults to BRANCHES if set %(default)s or all '
+                             'branches if not.')
     parser.add_argument('--gerrit-url', dest='gerrit_url',
                         default=os.getenv('GERRIT_URL',
                                           'https://gerrit.example.net'),
