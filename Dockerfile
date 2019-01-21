@@ -39,6 +39,7 @@ LABEL maintainer "Stephen Mulcahy <stephen.mulcahy@hpe.com>"
 COPY --from=build /usr/local /usr/local
 COPY --from=build /build/crontab /crontab
 COPY --from=build /build/projects.json /projects.json
+COPY --from=build /build/container-index.html /container-index.html
 EXPOSE 80
 RUN apt-get update && apt-get install -y --no-install-recommends \
         coreutils \
