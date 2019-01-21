@@ -7,3 +7,7 @@
 */15 *   *   *   *     /usr/local/bin/zing_stats -l /dev/stderr -o /var/www/html --projects /projects.json
 # generate 30 day stats every hour
 0   */1 *   *   *     /usr/local/bin/zing_stats -r 720 -l /dev/stderr -o /var/www/html --projects /projects.json
+# generate 60 day stats every day
+15   2  *   *   *     /usr/local/bin/zing_stats -r 1440 -l /dev/stderr -o /var/www/html --projects /projects.json
+# generate 90 day stats every day
+15   3  *   *   *     /usr/local/bin/zing_stats -r 2160 -l /dev/stderr -o /var/www/html --projects /projects.json
