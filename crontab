@@ -1,10 +1,10 @@
 # (c) Copyright 2017-2019 Hewlett Packard Enterprise Development LP
 
-# m h   dom mon dow   command
-# recreate index file on container start
-@reboot cp /container-index.html /var/www/html/index.html
+# m  h   dom mon dow   command
+# recreate index file periodically
+*/5  *   *   *   *     cp /container-index.html /var/www/html/index.html
 # generate 7 day stats every 15 min
-*/15 *   *   *   *     /usr/local/bin/zing_stats -l /dev/stderr -o /var/www/html --projects /projects.json
+*/15 *   *   *   *    /usr/local/bin/zing_stats -l /dev/stderr -o /var/www/html --projects /projects.json
 # generate 30 day stats every hour
 0   */1 *   *   *     /usr/local/bin/zing_stats -r 720 -l /dev/stderr -o /var/www/html --projects /projects.json
 # generate 60 day stats every day
