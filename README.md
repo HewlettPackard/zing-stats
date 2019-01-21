@@ -70,14 +70,16 @@ export VERSION=$(git describe --tags); docker build --build-arg VERSION=$VERSION
 (assumes projects.json is in your pwd, adjust the -v as neccesary if not)
 
 ```
-docker run -v $(pwd)/projects.json:/projects.json -e GERRIT_URL=<gerrit url> -e GITHUB_URL=<github enterprise url> -e GITHUB_TOKEN=<github token> zingstats/zing-stats:<version>
+docker run -v $(pwd)/projects.json:/projects.json -e GERRIT_URL=<gerrit url> -e GITHUB_URL=<github enterprise url> -e GITHUB_TOKEN=<github token> [-e BRANCHES="<branch name> <branch name> <branch name>"] zingstats/zing-stats:<version>
 ```
 
 e.g.
 
 ```
-docker run -v $(pwd)/projects.json:/projects.json -e gerrit_host=https://review.openstack.org/ -e github_host=https://github.com/ zingstats/zing-stats:latest
+docker run -v $(pwd)/projects.json:/projects.json -e GERRIT_URL=https://review.openstack.org/ -e GITHUB_URL=https://github.com/ -e BRANCHES="master devel" zingstats/zing-stats:latest
 ```
+
+BRANCHES is optional, if unspecified, zing-stats will analyse changes to all branches.
 
 ### Running in docker compose
 
