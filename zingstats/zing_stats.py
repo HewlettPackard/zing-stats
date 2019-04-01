@@ -328,7 +328,7 @@ def write_html(args, df, num_changes, start_dt, finish_dt, projects,
         teams.insert(2, teams.pop(github_index))
 
         html = generate_html(args, df, num_changes, start_dt, finish_dt,
-                             team_projects, all_projects, projects_map,
+                             team_projects, projects_map,
                              not_found_proj, team, teams)
         dir_path = os.path.join(args.output_dir, file_prefix)
         if team == 'All':
@@ -874,7 +874,7 @@ def debug_msg(field, counter, job_or_run, project_name, change_id, message_id,
 
 
 def generate_html(args, df, num_changes, start_dt, finish_dt,
-                  projects, all_projects, projects_map,
+                  projects, projects_map,
                   not_found_proj, group=None, groups=[]):
     """
     Returns html report from a dataframe for a specific project
@@ -900,14 +900,9 @@ def generate_html(args, df, num_changes, start_dt, finish_dt,
     df['total'].sort_index(inplace=True)
     log.debug('total df:\n%s', df['total'])
 
-    # resample data for plots
-    # for 24 hours or less, use units of 1 hours, otherwise use units of 1 day
-    if args.range_hours <= 24:
-        sample_window = '1H'
-    else:
-        sample_window = '1D'
+    resample_window = generate_resample_window(args.range_hours)
     df_plot = df['total'][df['total'].index > start_dt]
-    df_plot = df_plot.resample(sample_window).agg(({
+    df_plot = df_plot.resample(resample_window).agg(({
         'created': 'sum',
         'merged': 'sum',
         'updated': 'sum',
@@ -950,7 +945,6 @@ def generate_html(args, df, num_changes, start_dt, finish_dt,
         current_group=group,
         df=df,
         projects_to_report=projects_to_report,
-        all_projects=all_projects,
         num_changes=num_changes,
         start_dt=start_dt,
         finish_dt=finish_dt,
@@ -964,6 +958,16 @@ def generate_html(args, df, num_changes, start_dt, finish_dt,
         not_found_proj=not_found_proj,
         zs_ver=os.getenv('TAG', ''))
     return html
+
+
+def generate_resample_window(range_hours):
+    # resample data for plots
+    # for 24 hours or less, use units of 1 hours, otherwise use units of 1 day
+    if range_hours <= 24:
+        sample_window = '1H'
+    else:
+        sample_window = '1D'
+    return sample_window
 
 
 def plot_ci_success_failure(df_plot, group):
