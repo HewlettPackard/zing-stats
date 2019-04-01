@@ -288,6 +288,73 @@ def project_dataframe(df, df_change_stats, df_ci_stats, project):
 
 def write_html(args, df, num_changes, start_dt, finish_dt, projects,
                not_found_proj):
+    teams_map = generate_teams_map(projects)
+    projects_map = generate_projects_map(projects, teams_map)
+    file_prefix = report_file_prefix(args)
+
+    for team in sorted(teams_map):
+        team_projects = teams_map[team]
+        teams = sorted(teams_map.keys())
+        reorder_teams_map(teams)
+        html = generate_html(args, df, num_changes, start_dt, finish_dt,
+                             team_projects, projects_map,
+                             not_found_proj, team, teams)
+        write_file(args, file_prefix, html, team)
+
+
+def write_file(args, file_prefix, html, team):
+    dir_path = os.path.join(args.output_dir, file_prefix)
+    file_name = report_file_name(team)
+    file_path = os.path.join(dir_path, file_name)
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+    with open(file_path, 'w') as f:
+        f.write(html)
+    log.info('Wrote %s for team: "%s"', file_path, team)
+
+
+def reorder_teams_map(teams):
+    # Explicit ordering of some items, better done in the template
+    # but not clear how to easily do it
+    all_index = teams.index('All')
+    teams.insert(0, teams.pop(all_index))
+    gerrit_index = teams.index('gerrit')
+    teams.insert(1, teams.pop(gerrit_index))
+    github_index = teams.index('github')
+    teams.insert(2, teams.pop(github_index))
+
+
+def report_file_name(team):
+    if team == 'All':
+        file_name = 'index.html'
+    else:
+        file_name = '%s.html' % urllib.quote_plus(team.lower())
+    return file_name
+
+
+def report_file_prefix(args):
+    if args.range_hours <= 24:
+        file_prefix = 'last_%dh' % args.range_hours
+    else:
+        file_prefix = 'last_%gd' % round((args.range_hours / 24), 1)
+    return file_prefix
+
+
+def generate_projects_map(projects, teams_map):
+    projects_map = dict()
+    for system in ['gerrit', 'github']:
+        teams_map[system] = list()
+        for project in projects[system]:
+            name = project['name']
+            projects_map[name] = system
+            if name not in teams_map[system]:
+                teams_map[system].append(name)
+
+    log.debug('projects map: %s', projects_map)
+    return projects_map
+
+
+def generate_teams_map(projects):
     teams_map = dict()
     teams_map['All'] = list()
     for project in projects['gerrit'] + projects['github']:
@@ -300,46 +367,8 @@ def write_html(args, df, num_changes, start_dt, finish_dt, projects,
         if name not in teams_map[team]:
             teams_map[team].append(name)
 
-    projects_map = dict()
-    for system in ['gerrit', 'github']:
-        teams_map[system] = list()
-        for project in projects[system]:
-            name = project['name']
-            projects_map[name] = system
-            if name not in teams_map[system]:
-                teams_map[system].append(name)
     log.debug('teams map: %s', teams_map)
-
-    if args.range_hours <= 24:
-        file_prefix = 'last_%dh' % args.range_hours
-    else:
-        file_prefix = 'last_%gd' % round((args.range_hours / 24), 1)
-    for team in sorted(teams_map):
-        team_projects = teams_map[team]
-        teams = sorted(teams_map.keys())
-        # Explicit ordering of some items, better done in the template
-        # but not clear how to easily do it
-        all_index = teams.index('All')
-        teams.insert(0, teams.pop(all_index))
-        gerrit_index = teams.index('gerrit')
-        teams.insert(1, teams.pop(gerrit_index))
-        github_index = teams.index('github')
-        teams.insert(2, teams.pop(github_index))
-
-        html = generate_html(args, df, num_changes, start_dt, finish_dt,
-                             team_projects, projects_map,
-                             not_found_proj, team, teams)
-        dir_path = os.path.join(args.output_dir, file_prefix)
-        if team == 'All':
-            file_name = 'index.html'
-        else:
-            file_name = '%s.html' % urllib.quote_plus(team.lower())
-        file_path = os.path.join(dir_path, file_name)
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
-        with open(file_path, 'w') as f:
-            f.write(html)
-        log.info('Wrote %s for team: "%s"', file_path, team)
+    return teams_map
 
 
 def gather_github_prs(args, oldest_timestamp, projects):
