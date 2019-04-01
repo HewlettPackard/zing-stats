@@ -1126,34 +1126,5 @@ def plot_changes(df_plot, group):
     return changes_plot
 
 
-def generate_json(df_changes_by_project):
-    """
-    Returns pretty printed json of combined dataframes for all projects
-    """
-    frames = list()
-    for project in sorted(df_changes_by_project):
-        df = df_changes_by_project[project]
-        frames.append(df)
-    df = pd.concat(frames)
-    df = df.resample('1H').apply(({
-        'created': 'sum',
-        'merged': 'sum',
-        'updated': 'sum',
-        'ci_total_time_sec': 'sum',
-        'ci_longest_time_sec': 'max',
-        'ci_success': 'sum',
-        'ci_failure': 'sum',
-        'lifespan_sec': 'max',
-        'recheck': 'sum',
-        'reverify': 'sum',
-        'revisions': 'mean',
-    })).fillna(0)
-    df_as_json = json.loads(df.to_json(orient='index', date_format='iso'))
-    return(json.dumps(df_as_json,
-                      sort_keys=True,
-                      indent=4,
-                      separators=(',', ': ')))
-
-
 if __name__ == "__main__":
     main()
