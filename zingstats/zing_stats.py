@@ -314,7 +314,6 @@ def write_html(args, df, num_changes, start_dt, finish_dt, projects,
         file_prefix = 'last_%dh' % args.range_hours
     else:
         file_prefix = 'last_%gd' % round((args.range_hours / 24), 1)
-    all_projects = teams_map['All']
     for team in sorted(teams_map):
         team_projects = teams_map[team]
         teams = sorted(teams_map.keys())
