@@ -1029,7 +1029,7 @@ def plot_ci_job_time(args, df_plot, group):
             'width': 2,
             'dash': 'dot'}}
     ci_job_recommended_max_label = go.Scatter(
-        x=[df_plot.index.min() + 1],
+        x=[df_plot.index.min() + timedelta(days=1)],
         y=[args.ci_job_recommended_max_minutes +
            (args.ci_job_recommended_max_minutes * 0.05)],
         mode='text',
@@ -1073,7 +1073,7 @@ def plot_ci_capacity(args, df_plot, group):
             'width': 2,
             'dash': 'dot'}}
     ci_75pct_capacity_line_label = go.Scatter(
-        x=[df_plot.index.min() + 1],
+        x=[df_plot.index.min() + timedelta(days=1)],
         y=[system_capacity_max_ci_minutes +
            (system_capacity_max_ci_minutes * 0.05)],
         mode='text',
