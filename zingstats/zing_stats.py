@@ -146,7 +146,7 @@ def main():
                         help='Verify https requests (def: %(default)s).')
     parser.add_argument('-f', '--format', dest='report_format',
                         help='report format (def: %(default)s)',
-                        choices=['html'],
+                        choices=['html', 'json'],
                         default='html')
     parser.add_argument('--report-issue-link', dest='report_issue_link',
                         default=ISSUES_URL,
@@ -234,9 +234,8 @@ def main():
     df = generate_dataframes(args, get_changes_by_project(gerrit_changes),
                              github_prs, start_dt)
 
-    if args.report_format == 'html':
-        write_html(args, df, change_count, start_dt, finish_dt, projects,
-                   not_found_proj)
+    write_report(args, df, change_count, start_dt, finish_dt, projects,
+                 not_found_proj)
 
 
 def read_from_json(json_file):
@@ -286,8 +285,8 @@ def project_dataframe(df, df_change_stats, df_ci_stats, project):
     log.debug('df[%s]:\n%s', project, df[project])
 
 
-def write_html(args, df, num_changes, start_dt, finish_dt, projects,
-               not_found_proj):
+def write_report(args, df, num_changes, start_dt, finish_dt, projects,
+                 not_found_proj):
     teams_map = generate_teams_map(projects)
     projects_map = generate_projects_map(projects, teams_map)
     file_prefix = report_file_prefix(args)
@@ -296,20 +295,29 @@ def write_html(args, df, num_changes, start_dt, finish_dt, projects,
         team_projects = teams_map[team]
         teams = sorted(teams_map.keys())
         reorder_teams_map(teams)
-        html = generate_html(args, df, num_changes, start_dt, finish_dt,
-                             team_projects, projects_map,
-                             not_found_proj, team, teams)
-        write_file(args, file_prefix, html, team)
+        output = None
+        if args.report_format == 'html':
+            output = generate_html(args, df, num_changes, start_dt, finish_dt,
+                                   team_projects, projects_map, not_found_proj,
+                                   team, teams)
+        elif args.report_format == 'json':
+            output = generate_json(args, df, num_changes, start_dt, finish_dt,
+                                   team_projects, projects_map, not_found_proj,
+                                   team, teams)
+        else:
+            log.critical('%s output is not a supported', args.report_format)
+            exit(1)
+        write_file(args, file_prefix, output, team)
 
 
-def write_file(args, file_prefix, html, team):
+def write_file(args, file_prefix, report, team):
     dir_path = os.path.join(args.output_dir, file_prefix)
-    file_name = report_file_name(team)
+    file_name = report_file_name(team, args.report_format)
     file_path = os.path.join(dir_path, file_name)
     if not os.path.exists(dir_path):
         os.makedirs(dir_path)
     with open(file_path, 'w') as f:
-        f.write(html)
+        f.write(report)
     log.info('Wrote %s for team: "%s"', file_path, team)
 
 
@@ -324,11 +332,11 @@ def reorder_teams_map(teams):
     teams.insert(2, teams.pop(github_index))
 
 
-def report_file_name(team):
+def report_file_name(team, extension):
     if team == 'All':
-        file_name = 'index.html'
+        file_name = 'index.%s' % extension
     else:
-        file_name = '%s.html' % urllib.quote_plus(team.lower())
+        file_name = '%s.%s' % (urllib.quote_plus(team.lower()), extension)
     return file_name
 
 
@@ -908,15 +916,15 @@ def generate_html(args, df, num_changes, start_dt, finish_dt,
     Returns html report from a dataframe for a specific project
     """
     log.debug('Generating %s report for %s', args.report_format, group)
-
-    frames = list()
     log.debug(projects)
+
     if group:
         # we want to report on the projects that are common to projects and df
         projects_to_report = list(set(projects).intersection(df))
     else:
         projects_to_report = projects
 
+    frames = list()
     for project in projects_to_report:
         log.debug('%s df:\n%s', project, df[project])
         frames.append(df[project])
@@ -924,37 +932,7 @@ def generate_html(args, df, num_changes, start_dt, finish_dt,
     # TODO wrap this in proper html or a template
     if len(frames) <= 0:
         return 'No projects in this group'
-    df['total'] = pd.concat(frames)
-    df['total'].sort_index(inplace=True)
-    log.debug('total df:\n%s', df['total'])
-
-    resample_window = generate_resample_window(args.range_hours)
-    df_plot = df['total'][df['total'].index > start_dt]
-    df_plot = df_plot.resample(resample_window).agg(({
-        'created': 'sum',
-        'merged': 'sum',
-        'updated': 'sum',
-        'ci_total_time_sec': 'sum',
-        'ci_longest_time_sec': 'max',
-        'ci_success': 'sum',
-        'ci_failure': 'sum',
-        'promotion_success': 'sum',
-        'promotion_failure': 'sum',
-        'lifespan_sec': 'max',
-        'recheck': 'sum',
-        'reverify': 'sum',
-        'revisions': 'mean',
-    })).fillna(0)
-    df_plot['pct_success'] = (df_plot['ci_success'] /
-                              (df_plot['ci_failure'] +
-                               df_plot['ci_success'])) * 100
-    df_plot['pct_failure'] = (df_plot['ci_failure'] /
-                              (df_plot['ci_failure'] +
-                               df_plot['ci_success'])) * 100
-    df_plot['ci_total_time_min'] = df_plot['ci_total_time_sec'] / 60
-    df_plot['ci_longest_time_min'] = df_plot['ci_longest_time_sec'] / 60
-    df_plot.fillna(value=0, inplace=True)
-    log.debug('df plot= %s', df_plot)
+    df_plot = generate_plot(args, df, frames, start_dt)
 
     # add a custom filter to jinja for url encoding
     environment = jinja2.Environment()
@@ -988,7 +966,68 @@ def generate_html(args, df, num_changes, start_dt, finish_dt,
     return html
 
 
-def generate_resample_window(range_hours):
+def generate_json(args, df, num_changes, start_dt, finish_dt,
+                  projects, projects_map,
+                  not_found_proj, group=None, groups=[]):
+    """
+    Returns json report from a dataframe for a specific project
+    """
+    log.debug('Generating %s report for %s', args.report_format, group)
+    log.debug(projects)
+
+    if group:
+        # we want to report on the projects that are common to projects and df
+        projects_to_report = list(set(projects).intersection(df))
+    else:
+        projects_to_report = projects
+
+    frames = list()
+    for project in projects_to_report:
+        log.debug('%s df:\n%s', project, df[project])
+        frames.append(df[project])
+
+    # TODO wrap this in proper html or a template
+    if len(frames) <= 0:
+        return 'No projects in this group'
+    df_plot = generate_plot(args, df, frames, start_dt)
+    return df_plot.to_json(orient='table')
+
+
+def generate_plot(args, df, frames, start_dt):
+    df['total'] = pd.concat(frames)
+    df['total'].sort_index(inplace=True)
+    log.debug('total df:\n%s', df['total'])
+    resample_window = set_resample_window(args.range_hours)
+    df_plot = df['total'][df['total'].index > start_dt]
+    df_plot = df_plot.resample(resample_window).agg(({
+        'created': 'sum',
+        'merged': 'sum',
+        'updated': 'sum',
+        'ci_total_time_sec': 'sum',
+        'ci_longest_time_sec': 'max',
+        'ci_success': 'sum',
+        'ci_failure': 'sum',
+        'promotion_success': 'sum',
+        'promotion_failure': 'sum',
+        'lifespan_sec': 'max',
+        'recheck': 'sum',
+        'reverify': 'sum',
+        'revisions': 'mean',
+    })).fillna(0)
+    df_plot['pct_success'] = (df_plot['ci_success'] /
+                              (df_plot['ci_failure'] +
+                               df_plot['ci_success'])) * 100
+    df_plot['pct_failure'] = (df_plot['ci_failure'] /
+                              (df_plot['ci_failure'] +
+                               df_plot['ci_success'])) * 100
+    df_plot['ci_total_time_min'] = df_plot['ci_total_time_sec'] / 60
+    df_plot['ci_longest_time_min'] = df_plot['ci_longest_time_sec'] / 60
+    df_plot.fillna(value=0, inplace=True)
+    log.debug('df plot= %s', df_plot)
+    return df_plot
+
+
+def set_resample_window(range_hours):
     # resample data for plots
     # for 24 hours or less, use units of 1 hours, otherwise use units of 1 day
     if range_hours <= 24:
