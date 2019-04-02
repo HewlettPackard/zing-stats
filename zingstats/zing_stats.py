@@ -43,6 +43,7 @@ from datetime import timedelta
 
 import jinja2
 import pandas as pd
+import pkg_resources
 import plotly
 import requests
 from plotly import graph_objs as go
@@ -87,6 +88,10 @@ def main():
     parser.set_defaults(
         script_dir=os.path.abspath((os.path.dirname(script_name)))
     )
+
+    parser.add_argument('--version', action='version',
+                        version='%(prog)s ' + pkg_resources.get_distribution(
+                            'zingstats').version)
     parser.add_argument('-b', '--branch', dest='branches',
                         default=os.getenv('BRANCHES', '').split(),
                         action='append',
@@ -965,7 +970,7 @@ def generate_html(args, df, num_changes, start_dt, finish_dt,
         status_plot=plot_ci_success_failure(df_plot, group),
         projects_map=projects_map,
         not_found_proj=not_found_proj,
-        zs_ver=os.getenv('TAG', ''))
+        zs_ver=pkg_resources.get_distribution('zingstats').version)
     return html
 
 
