@@ -43,6 +43,7 @@ from datetime import timedelta
 
 import jinja2
 import pandas as pd
+import pkg_resources
 import plotly
 import requests
 from plotly import graph_objs as go
@@ -87,6 +88,10 @@ def main():
     parser.set_defaults(
         script_dir=os.path.abspath((os.path.dirname(script_name)))
     )
+
+    parser.add_argument('--version', action='version',
+                        version='%(prog)s ' + pkg_resources.get_distribution(
+                            'zingstats').version)
     parser.add_argument('-b', '--branch', dest='branches',
                         default=os.getenv('BRANCHES', '').split(),
                         action='append',
@@ -146,7 +151,7 @@ def main():
                         help='Verify https requests (def: %(default)s).')
     parser.add_argument('-f', '--format', dest='report_format',
                         help='report format (def: %(default)s)',
-                        choices=['html'],
+                        choices=['html', 'json'],
                         default='html')
     parser.add_argument('--report-issue-link', dest='report_issue_link',
                         default=ISSUES_URL,
@@ -234,9 +239,8 @@ def main():
     df = generate_dataframes(args, get_changes_by_project(gerrit_changes),
                              github_prs, start_dt)
 
-    if args.report_format == 'html':
-        write_html(args, df, change_count, start_dt, finish_dt, projects,
-                   not_found_proj)
+    write_report(args, df, change_count, start_dt, finish_dt, projects,
+                 not_found_proj)
 
 
 def read_from_json(json_file):
@@ -280,14 +284,93 @@ def project_dataframe(df, df_change_stats, df_ci_stats, project):
             project)
         exit(1)
     df[project] = pd.concat([df_change_stats, df_ci_stats], sort=True)
-    df[project].index = pd.to_datetime(df[project].index)
+    df[project].index = pd.to_datetime(df[project].index, utc=True)
     df[project].sort_index(inplace=True)
     df[project].fillna(value=0, inplace=True)
+    if df[project].index.tz is None:
+        df[project] = df[project].tz_localize('UTC', ambiguous='infer')
+    df[project] = df[project].tz_convert(None)
     log.debug('df[%s]:\n%s', project, df[project])
 
 
-def write_html(args, df, num_changes, start_dt, finish_dt, projects,
-               not_found_proj):
+def write_report(args, df, num_changes, start_dt, finish_dt, projects,
+                 not_found_proj):
+    teams_map = generate_teams_map(projects)
+    projects_map = generate_projects_map(projects, teams_map)
+    file_prefix = report_file_prefix(args)
+
+    for team in sorted(teams_map):
+        team_projects = teams_map[team]
+        teams = sorted(teams_map.keys())
+        reorder_teams_map(teams)
+        output = None
+        if args.report_format == 'html':
+            output = generate_html(args, df, num_changes, start_dt, finish_dt,
+                                   team_projects, projects_map, not_found_proj,
+                                   team, teams)
+        elif args.report_format == 'json':
+            output = generate_json(args, df, num_changes, start_dt, finish_dt,
+                                   team_projects, projects_map, not_found_proj,
+                                   team, teams)
+        else:
+            log.critical('%s output is not a supported', args.report_format)
+            exit(1)
+        write_file(args, file_prefix, output, team)
+
+
+def write_file(args, file_prefix, report, team):
+    dir_path = os.path.join(args.output_dir, file_prefix)
+    file_name = report_file_name(team, args.report_format)
+    file_path = os.path.join(dir_path, file_name)
+    if not os.path.exists(dir_path):
+        os.makedirs(dir_path)
+    with open(file_path, 'w') as f:
+        f.write(report)
+    log.info('Wrote %s for team: "%s"', file_path, team)
+
+
+def reorder_teams_map(teams):
+    # Explicit ordering of some items, better done in the template
+    # but not clear how to easily do it
+    all_index = teams.index('All')
+    teams.insert(0, teams.pop(all_index))
+    gerrit_index = teams.index('gerrit')
+    teams.insert(1, teams.pop(gerrit_index))
+    github_index = teams.index('github')
+    teams.insert(2, teams.pop(github_index))
+
+
+def report_file_name(team, extension):
+    if team == 'All':
+        file_name = 'index.%s' % extension
+    else:
+        file_name = '%s.%s' % (urllib.quote_plus(team.lower()), extension)
+    return file_name
+
+
+def report_file_prefix(args):
+    if args.range_hours <= 24:
+        file_prefix = 'last_%dh' % args.range_hours
+    else:
+        file_prefix = 'last_%gd' % round((args.range_hours / 24), 1)
+    return file_prefix
+
+
+def generate_projects_map(projects, teams_map):
+    projects_map = dict()
+    for system in ['gerrit', 'github']:
+        teams_map[system] = list()
+        for project in projects[system]:
+            name = project['name']
+            projects_map[name] = system
+            if name not in teams_map[system]:
+                teams_map[system].append(name)
+
+    log.debug('projects map: %s', projects_map)
+    return projects_map
+
+
+def generate_teams_map(projects):
     teams_map = dict()
     teams_map['All'] = list()
     for project in projects['gerrit'] + projects['github']:
@@ -300,47 +383,8 @@ def write_html(args, df, num_changes, start_dt, finish_dt, projects,
         if name not in teams_map[team]:
             teams_map[team].append(name)
 
-    projects_map = dict()
-    for system in ['gerrit', 'github']:
-        teams_map[system] = list()
-        for project in projects[system]:
-            name = project['name']
-            projects_map[name] = system
-            if name not in teams_map[system]:
-                teams_map[system].append(name)
     log.debug('teams map: %s', teams_map)
-
-    if args.range_hours <= 24:
-        file_prefix = 'last_%dh' % args.range_hours
-    else:
-        file_prefix = 'last_%gd' % round((args.range_hours / 24), 1)
-    all_projects = teams_map['All']
-    for team in sorted(teams_map):
-        team_projects = teams_map[team]
-        teams = sorted(teams_map.keys())
-        # Explicit ordering of some items, better done in the template
-        # but not clear how to easily do it
-        all_index = teams.index('All')
-        teams.insert(0, teams.pop(all_index))
-        gerrit_index = teams.index('gerrit')
-        teams.insert(1, teams.pop(gerrit_index))
-        github_index = teams.index('github')
-        teams.insert(2, teams.pop(github_index))
-
-        html = generate_html(args, df, num_changes, start_dt, finish_dt,
-                             team_projects, all_projects, projects_map,
-                             not_found_proj, team, teams)
-        dir_path = os.path.join(args.output_dir, file_prefix)
-        if team == 'All':
-            file_name = 'index.html'
-        else:
-            file_name = '%s.html' % urllib.quote_plus(team.lower())
-        file_path = os.path.join(dir_path, file_name)
-        if not os.path.exists(dir_path):
-            os.makedirs(dir_path)
-        with open(file_path, 'w') as f:
-            f.write(html)
-        log.info('Wrote %s for team: "%s"', file_path, team)
+    return teams_map
 
 
 def gather_github_prs(args, oldest_timestamp, projects):
@@ -874,21 +918,21 @@ def debug_msg(field, counter, job_or_run, project_name, change_id, message_id,
 
 
 def generate_html(args, df, num_changes, start_dt, finish_dt,
-                  projects, all_projects, projects_map,
+                  projects, projects_map,
                   not_found_proj, group=None, groups=[]):
     """
     Returns html report from a dataframe for a specific project
     """
     log.debug('Generating %s report for %s', args.report_format, group)
-
-    frames = list()
     log.debug(projects)
+
     if group:
         # we want to report on the projects that are common to projects and df
         projects_to_report = list(set(projects).intersection(df))
     else:
         projects_to_report = projects
 
+    frames = list()
     for project in projects_to_report:
         log.debug('%s df:\n%s', project, df[project])
         frames.append(df[project])
@@ -896,18 +940,74 @@ def generate_html(args, df, num_changes, start_dt, finish_dt,
     # TODO wrap this in proper html or a template
     if len(frames) <= 0:
         return 'No projects in this group'
+    df_plot = generate_plot(args, df, frames, start_dt)
+
+    # add a custom filter to jinja for url encoding
+    environment = jinja2.Environment()
+    environment.filters['quote_plus'] = lambda u: urllib.quote_plus(u)
+
+    with open(args.html_template, 'r') as f:
+        html_template = f.read()
+    template = environment.from_string(html_template)
+    if args.range_hours <= 24:
+        title_units = '%d hours' % args.range_hours
+    else:
+        title_units = '%g days' % (args.range_hours / 24)
+    html = template.render(
+        title='%s for last %s' % (args.report_title, title_units),
+        group_list=groups,
+        current_group=group,
+        df=df,
+        projects_to_report=projects_to_report,
+        num_changes=num_changes,
+        start_dt=start_dt,
+        finish_dt=finish_dt,
+        report_issue_link=args.report_issue_link,
+        contact_email=args.contact_email,
+        changes_plot=plot_changes(df_plot, group),
+        ci_capacity_plot=plot_ci_capacity(args, df_plot, group),
+        ci_job_time_plot=plot_ci_job_time(args, df_plot, group),
+        status_plot=plot_ci_success_failure(df_plot, group),
+        projects_map=projects_map,
+        not_found_proj=not_found_proj,
+        zs_ver=pkg_resources.get_distribution('zingstats').version)
+    return html
+
+
+def generate_json(args, df, num_changes, start_dt, finish_dt,
+                  projects, projects_map,
+                  not_found_proj, group=None, groups=[]):
+    """
+    Returns json report from a dataframe for a specific project
+    """
+    log.debug('Generating %s report for %s', args.report_format, group)
+    log.debug(projects)
+
+    if group:
+        # we want to report on the projects that are common to projects and df
+        projects_to_report = list(set(projects).intersection(df))
+    else:
+        projects_to_report = projects
+
+    frames = list()
+    for project in projects_to_report:
+        log.debug('%s df:\n%s', project, df[project])
+        frames.append(df[project])
+
+    # TODO wrap this in proper html or a template
+    if len(frames) <= 0:
+        return 'No projects in this group'
+    df_plot = generate_plot(args, df, frames, start_dt)
+    return df_plot.to_json(orient='table')
+
+
+def generate_plot(args, df, frames, start_dt):
     df['total'] = pd.concat(frames)
     df['total'].sort_index(inplace=True)
     log.debug('total df:\n%s', df['total'])
-
-    # resample data for plots
-    # for 24 hours or less, use units of 1 hours, otherwise use units of 1 day
-    if args.range_hours <= 24:
-        sample_window = '1H'
-    else:
-        sample_window = '1D'
+    resample_window = set_resample_window(args.range_hours)
     df_plot = df['total'][df['total'].index > start_dt]
-    df_plot = df_plot.resample(sample_window).agg(({
+    df_plot = df_plot.resample(resample_window).agg(({
         'created': 'sum',
         'merged': 'sum',
         'updated': 'sum',
@@ -932,38 +1032,17 @@ def generate_html(args, df, num_changes, start_dt, finish_dt,
     df_plot['ci_longest_time_min'] = df_plot['ci_longest_time_sec'] / 60
     df_plot.fillna(value=0, inplace=True)
     log.debug('df plot= %s', df_plot)
+    return df_plot
 
-    # add a custom filter to jinja for url encoding
-    environment = jinja2.Environment()
-    environment.filters['quote_plus'] = lambda u: urllib.quote_plus(u)
 
-    with open(args.html_template, 'r') as f:
-        html_template = f.read()
-    template = environment.from_string(html_template)
-    if args.range_hours <= 24:
-        title_units = '%d hours' % args.range_hours
+def set_resample_window(range_hours):
+    # resample data for plots
+    # for 24 hours or less, use units of 1 hours, otherwise use units of 1 day
+    if range_hours <= 24:
+        sample_window = '1H'
     else:
-        title_units = '%g days' % (args.range_hours / 24)
-    html = template.render(
-        title='%s for last %s' % (args.report_title, title_units),
-        group_list=groups,
-        current_group=group,
-        df=df,
-        projects_to_report=projects_to_report,
-        all_projects=all_projects,
-        num_changes=num_changes,
-        start_dt=start_dt,
-        finish_dt=finish_dt,
-        report_issue_link=args.report_issue_link,
-        contact_email=args.contact_email,
-        changes_plot=plot_changes(df_plot, group),
-        ci_capacity_plot=plot_ci_capacity(args, df_plot, group),
-        ci_job_time_plot=plot_ci_job_time(args, df_plot, group),
-        status_plot=plot_ci_success_failure(df_plot, group),
-        projects_map=projects_map,
-        not_found_proj=not_found_proj,
-        zs_ver=os.getenv('TAG', ''))
-    return html
+        sample_window = '1D'
+    return sample_window
 
 
 def plot_ci_success_failure(df_plot, group):
@@ -1029,7 +1108,7 @@ def plot_ci_job_time(args, df_plot, group):
             'width': 2,
             'dash': 'dot'}}
     ci_job_recommended_max_label = go.Scatter(
-        x=[df_plot.index.min() + 1],
+        x=[df_plot.index.min() + timedelta(days=1)],
         y=[args.ci_job_recommended_max_minutes +
            (args.ci_job_recommended_max_minutes * 0.05)],
         mode='text',
@@ -1073,7 +1152,7 @@ def plot_ci_capacity(args, df_plot, group):
             'width': 2,
             'dash': 'dot'}}
     ci_75pct_capacity_line_label = go.Scatter(
-        x=[df_plot.index.min() + 1],
+        x=[df_plot.index.min() + timedelta(days=1)],
         y=[system_capacity_max_ci_minutes +
            (system_capacity_max_ci_minutes * 0.05)],
         mode='text',
@@ -1124,35 +1203,6 @@ def plot_changes(df_plot, group):
         output_type='div',
         include_plotlyjs='False')
     return changes_plot
-
-
-def generate_json(df_changes_by_project):
-    """
-    Returns pretty printed json of combined dataframes for all projects
-    """
-    frames = list()
-    for project in sorted(df_changes_by_project):
-        df = df_changes_by_project[project]
-        frames.append(df)
-    df = pd.concat(frames)
-    df = df.resample('1H').apply(({
-        'created': 'sum',
-        'merged': 'sum',
-        'updated': 'sum',
-        'ci_total_time_sec': 'sum',
-        'ci_longest_time_sec': 'max',
-        'ci_success': 'sum',
-        'ci_failure': 'sum',
-        'lifespan_sec': 'max',
-        'recheck': 'sum',
-        'reverify': 'sum',
-        'revisions': 'mean',
-    })).fillna(0)
-    df_as_json = json.loads(df.to_json(orient='index', date_format='iso'))
-    return(json.dumps(df_as_json,
-                      sort_keys=True,
-                      indent=4,
-                      separators=(',', ': ')))
 
 
 if __name__ == "__main__":
