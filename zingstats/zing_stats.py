@@ -279,9 +279,12 @@ def project_dataframe(df, df_change_stats, df_ci_stats, project):
             project)
         exit(1)
     df[project] = pd.concat([df_change_stats, df_ci_stats], sort=True)
-    df[project].index = pd.to_datetime(df[project].index)
+    df[project].index = pd.to_datetime(df[project].index, utc=True)
     df[project].sort_index(inplace=True)
     df[project].fillna(value=0, inplace=True)
+    if df[project].index.tz is None:
+        df[project] = df[project].tz_localize('UTC', ambiguous='infer')
+    df[project] = df[project].tz_convert(None)
     log.debug('df[%s]:\n%s', project, df[project])
 
 
