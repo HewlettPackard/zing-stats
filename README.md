@@ -1,7 +1,6 @@
-[![Build Status](https://travis-ci.org/HewlettPackard/zing-stats.svg?branch=master)](https://travis-ci.org/HewlettPackard/zing-stats)
+[![CircleCI](https://circleci.com/gh/HewlettPackard/zing-stats.svg?style=svg)](https://circleci.com/gh/HewlettPackard/zing-stats)
 [![Docker Repository on Quay](https://quay.io/repository/smulcahy/zing-stats/status "Docker Repository on Quay")](https://quay.io/repository/smulcahy/zing-stats)
 [![codecov](https://codecov.io/gh/HewlettPackard/zing-stats/branch/master/graph/badge.svg)](https://codecov.io/gh/HewlettPackard/zing-stats)
-[![Maintainability](https://api.codeclimate.com/v1/badges/44b88c848f141122961a/maintainability)](https://codeclimate.com/github/HewlettPackard/zing-stats/maintainability)
 
 &copy; Copyright 2017-2019 Hewlett Packard Enterprise Development LP
 
