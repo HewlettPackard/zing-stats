@@ -7,6 +7,7 @@
 
 # zing-stats
 
+
 ## Introduction
 
 Tool for generating summary stat reports and graphs from Gerrit (https://www.gerritcodereview.com/) and GitHub Enterprise review and pull requests data.
