@@ -20,6 +20,16 @@ jobs:
     steps:
       - checkout
 
+      - run:
+          name: CircleCI functionality tests
+          command: |
+              echo "CIRCLE_PROJECT_REPONAME = $CIRCLE_PROJECT_REPONAME"
+              echo "CIRCLE_PULL_REQUESTS = $CIRCLE_PULL_REQUESTS"
+              echo "CIRCLE_BRANCH = $CIRCLE_BRANCH"
+              echo "CIRCLE_PR_REPONAME = $CIRCLE_PR_REPONAME"
+              echo "CIRCLE_SHA1 = $CIRCLE_SHA1"
+
+
       # Download and cache dependencies
       - restore_cache:
           keys:
@@ -53,6 +63,10 @@ jobs:
       - store_artifacts:
           path: test-reports
           destination: test-reports
+
+      - store_artifacts:
+          path: coverage.xml
+          destination: coverage
 
       - store_test_results:
           path: test-reports
