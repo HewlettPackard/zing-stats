@@ -47,7 +47,7 @@ jobs:
       - persist_to_workspace:
           root: ~/workspace
           paths:
-            - venv
+            - .
 
   test:
     docker:
