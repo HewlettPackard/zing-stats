@@ -9,6 +9,11 @@ jobs:
       - image: circleci/python:2.7
     working_directory: ~/workspace
     steps:
+      - run:
+          name: debug
+          command: |
+              pwd
+              ls -la .
       - checkout
       - run:
           name: CircleCI vars
@@ -34,6 +39,11 @@ jobs:
           paths:
             - ./venv
           key: v1-dependencies-{{ checksum "setup.py" }}
+      - run:
+          name: debug
+          command: |
+              pwd
+              ls -la .
       - persist_to_workspace:
           root: ~/workspace
           paths:
@@ -44,8 +54,18 @@ jobs:
       - image: circleci/python:2.7
     working_directory: ~/workspace
     steps:
+      - run:
+          name: debug
+          command: |
+              pwd
+              ls -la .
       - attach_workspace:
           at: ~/workspace
+      - run:
+          name: debug
+          command: |
+              pwd
+              ls -la .
       - run:
           name: Run tests
           command: |
