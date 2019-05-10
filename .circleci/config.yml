@@ -7,7 +7,7 @@ jobs:
   build:
     docker:
       - image: circleci/python:2.7
-    working_directory: ~/repo
+    working_directory: ~/workspace
     steps:
       - checkout
       - run:
@@ -43,7 +43,7 @@ jobs:
   test:
     docker:
       - image: circleci/python:2.7
-    working_directory: ~/repo
+    working_directory: ~/workspace
     steps:
       - attach_workspace:
           at: workspace
