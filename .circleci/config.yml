@@ -6,46 +6,53 @@ version: 2
 jobs:
   build:
     docker:
-      # specify the version you desire here
-      # use `-browsers` prefix for selenium tests, e.g. `3.6.1-browsers`
       - image: circleci/python:2.7
-
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/postgres:9.4
-
-    working_directory: ~/repo
-
+    working_directory: ~/workspace
     steps:
       - checkout
-
-      # Download and cache dependencies
+      - run:
+          name: CircleCI vars
+          command: |
+              echo "CIRCLE_PROJECT_REPONAME = $CIRCLE_PROJECT_REPONAME"
+              echo "CIRCLE_PROJECT_USERNAME = $CIRCLE_PROJECT_USERNAME"
+              echo "CIRCLE_PULL_REQUESTS = $CIRCLE_PULL_REQUESTS"
+              echo "CIRCLE_BRANCH = $CIRCLE_BRANCH"
+              echo "CIRCLE_PR_REPONAME = $CIRCLE_PR_REPONAME"
+              echo "CIRCLE_SHA1 = $CIRCLE_SHA1"
       - restore_cache:
           keys:
             - v1-dependencies-{{ checksum "setup.py" }}
             # fallback to using the latest cache if no exact match is found
             - v1-dependencies-
-
       - run:
-          name: install dependencies
+          name: Install dependencies
           command: |
             virtualenv venv
             . venv/bin/activate
             python setup.py install
-
       - save_cache:
           paths:
             - ./venv
           key: v1-dependencies-{{ checksum "setup.py" }}
+      - persist_to_workspace:
+          root: .
+          paths:
+            - venv
 
-      # run tests!
-      # this example uses Django's built-in test-runner
-      # other common Python testing frameworks include pytest and nose
-      # https://pytest.org
-      # https://nose.readthedocs.io
+  test:
+    docker:
+      - image: circleci/python:2.7
+    working_directory: ~/workspace
+    steps:
+      - attach_workspace:
+          at: workspace
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "setup.py" }}
+            # fallback to using the latest cache if no exact match is found
+            - v1-dependencies-
       - run:
-          name: run tests
+          name: Run tests
           command: |
             . venv/bin/activate
             python setup.py test
@@ -54,5 +61,18 @@ jobs:
           path: test-reports
           destination: test-reports
 
+      - store_artifacts:
+          path: coverage.xml
+          destination: coverage
+
       - store_test_results:
           path: test-reports
+
+workflows:
+    version: 2
+    build_and_test:
+        jobs:
+            - build
+            - test:
+                requires:
+                    - build
