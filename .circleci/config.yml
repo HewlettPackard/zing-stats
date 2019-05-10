@@ -4,6 +4,38 @@
 #
 version: 2
 jobs:
+  build_linux:
+    machine: true
+    steps:
+      - checkout
+      - run:
+          name: build
+          command: |
+            virtualenv venv
+            . venv/bin/activate
+            python setup.py install
+      - run:
+          name: test
+          command: |
+            virtualenv venv
+            . venv/bin/activate
+            python setup.py test
+  build_macos:
+    macos:
+        xcode: "9.0"
+    steps:
+      - checkout
+      - run:
+          name: build
+          command: |
+            virtualenv venv
+            . venv/bin/activate
+            python setup.py install
+      - run:
+          name: test
+          command: |
+            virtualenv venv
+            . venv/bin/activate
   build:
     docker:
       - image: circleci/python:2.7
@@ -88,6 +120,8 @@ workflows:
     build_and_test:
         jobs:
             - build
+            - build_linux
+            - build_macos
             - test:
                 requires:
                     - build
