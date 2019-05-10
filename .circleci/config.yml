@@ -36,7 +36,7 @@ jobs:
             - ./venv
           key: v1-dependencies-{{ checksum "setup.py" }}
       - persist_to_workspace:
-          root: workspace
+          root: .
           paths:
             - venv
 
