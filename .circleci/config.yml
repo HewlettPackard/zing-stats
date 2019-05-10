@@ -35,7 +35,7 @@ jobs:
             - ./venv
           key: v1-dependencies-{{ checksum "setup.py" }}
       - persist_to_workspace:
-          root: .
+          root: ~/workspace
           paths:
             - venv
 
@@ -45,12 +45,7 @@ jobs:
     working_directory: ~/workspace
     steps:
       - attach_workspace:
-          at: workspace
-      - restore_cache:
-          keys:
-            - v1-dependencies-{{ checksum "setup.py" }}
-            # fallback to using the latest cache if no exact match is found
-            - v1-dependencies-
+          at: ~/workspace
       - run:
           name: Run tests
           command: |
