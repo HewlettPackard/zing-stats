@@ -63,3 +63,10 @@ jobs:
 
       - store_test_results:
           path: test-reports
+
+workflows:
+    version: 1
+    build_and_test:
+        jobs:
+            - build
+            - test
